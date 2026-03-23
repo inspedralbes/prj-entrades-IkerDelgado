@@ -1,0 +1,72 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ticket-mysql-prod
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - dbdata_prod:/var/lib/mysql
+    networks:
+      - ticket-network-prod
+
+  redis:
+    image: redis:alpine
+    container_name: ticket-redis-prod
+    restart: always
+    networks:
+      - ticket-network-prod
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: ticket-api-prod
+    restart: always
+    environment:
+      APP_ENV: production
+      DB_HOST: mysql
+      REDIS_HOST: redis
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - ticket-network-prod
+
+  nginx:
+    image: nginx:alpine
+    container_name: ticket-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - api
+    networks:
+      - ticket-network-prod
+
+  socket:
+    build:
+      context: ./socket
+      dockerfile: Dockerfile
+    container_name: ticket-socket-prod
+    restart: always
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+    networks:
+      - ticket-network-prod
+
+networks:
+  ticket-network-prod:
+    driver: bridge
+
+volumes:
+  dbdata_prod:
+    driver: local
