@@ -13,6 +13,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - dbdata:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - ticket-network
 
@@ -92,6 +93,16 @@ services:
     environment:
       VITE_API_URL: http://localhost:${API_EXTERNAL_PORT:-8000}
       VITE_SOCKET_URL: http://localhost:${SOCKET_PORT:-3000}
+    networks:
+      - ticket-network
+
+  # Adminer (Database Management GUI)
+  adminer:
+    image: adminer
+    container_name: ticket-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
     networks:
       - ticket-network
 

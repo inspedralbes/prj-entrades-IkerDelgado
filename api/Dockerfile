@@ -1,24 +1,27 @@
-FROM php:8.2-fpm-bookworm
+FROM php:8.4-fpm-alpine
 
-# Instalar dependencias con limpieza previa para mayor estabilidad
-RUN apt-get clean && apt-get update && apt-get install -y --no-install-recommends \
+# Instal·lar dependències del sistema i eines de compilació per a extensions
+RUN apk add --no-cache \
     git \
     curl \
     libpng-dev \
-    libonig-dev \
+    oniguruma-dev \
     libxml2-dev \
     zip \
     unzip \
     libzip-dev \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    $PHPIZE_DEPS
 
-# Instalar extensiones de PHP necesarias para Laravel
+# Instal·lar extensions de PHP
 RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
 
-# Instalar Redis para la comunicación Laravel <-> Socket
+# Instal·lar Redis via PECL
 RUN pecl install redis && docker-php-ext-enable redis
 
-# Obtener Composer
+# Netejar eines de compilació per estalviar espai (opcional)
+RUN apk del $PHPIZE_DEPS
+
+# Obtenir Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
