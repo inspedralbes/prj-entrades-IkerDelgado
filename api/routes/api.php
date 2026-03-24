@@ -39,7 +39,12 @@ Route::middleware('auth:sanctum')->group(function () {
     |----------------------------------------------------------------------
     */
     Route::middleware('role:admin')->group(function () {
-        // CRUD de eventos (solo admin puede crear/editar/borrar)
+        // Gestió d'usuaris
+        Route::get('/users', function () {
+            return \App\Models\User::all();
+        });
+
+        // CRUD de eventos
         Route::post('/events', [EventController::class, 'store']);
         Route::put('/events/{id}', [EventController::class, 'update']);
         Route::delete('/events/{id}', [EventController::class, 'destroy']);
