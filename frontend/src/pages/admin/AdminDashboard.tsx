@@ -1,13 +1,73 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Users, Calendar, Clock, LogOut, Plus, Loader2, 
+  Users, Calendar, LogOut, Plus, Loader2, 
   Search, Trash2, Edit3, X, Save, AlertCircle,
-  MapPin, Music, Image as ImageIcon
+  MapPin, Music, Image as ImageIcon, ArrowRight,
+  Menu, LayoutDashboard
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ContentCard, RoleBadge } from '../../components/ui/DashboardUI';
+
+const MenuVertical = ({
+  menuItems,
+  activeTab,
+  color = "#6366f1",
+  skew = 0,
+}: {
+  menuItems: { id: string; label: string; onClick: () => void }[];
+  activeTab: string;
+  color?: string;
+  skew?: number;
+}) => {
+  return (
+    <div className="flex flex-col gap-8">
+      {menuItems.map((item) => {
+        const isActive = activeTab === item.id;
+        return (
+          <motion.div
+            key={item.id}
+            className={`group/nav flex items-center gap-3 cursor-pointer transition-colors ${
+              isActive ? 'text-white' : 'text-slate-500 hover:text-slate-300'
+            }`}
+            initial="initial"
+            whileHover="hover"
+            onClick={item.onClick}
+          >
+            <motion.div
+              variants={{
+                initial: { x: -10, opacity: 0 },
+                hover: { x: 0, opacity: 1 },
+                active: { x: 0, opacity: 1 }
+              }}
+              animate={isActive ? "active" : "initial"}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              <ArrowRight strokeWidth={3} size={24} style={{ color: isActive ? color : 'inherit' }} />
+            </motion.div>
+
+            <motion.span
+              variants={{
+                initial: { x: -20 },
+                hover: { x: 0, skewX: skew },
+                active: { x: 0 }
+              }}
+              animate={isActive ? "active" : "initial"}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="font-black text-3xl tracking-tighter uppercase"
+              style={{ color: isActive ? color : 'inherit' }}
+            >
+              {item.label}
+            </motion.span>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+};
 
 type TabType = 'users' | 'events' | 'sessions';
 
@@ -17,7 +77,8 @@ export const AdminDashboard = () => {
   const [eventsForSessions, setEventsForSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Estats per als Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,10 +91,8 @@ export const AdminDashboard = () => {
     try {
       const endpoint = tab === 'users' ? '/users' : (tab === 'events' ? '/events' : '/sessions');
       const res = await api.get(endpoint);
-      // Els esdeveniments i sessions solen venir dins de .data.data degut als Resources de Laravel
       setData(res.data.data || res.data);
       
-      // Si estem a sessions, també necessitem els events per al select
       if (tab === 'sessions') {
         const eventsRes = await api.get('/events');
         setEventsForSessions(eventsRes.data.data || eventsRes.data);
@@ -48,6 +107,7 @@ export const AdminDashboard = () => {
 
   useEffect(() => {
     fetchData();
+    setIsMobileMenuOpen(false);
   }, [tab]);
 
   const handleDelete = async (id: number) => {
@@ -67,7 +127,6 @@ export const AdminDashboard = () => {
     if (item) {
       setFormData(item);
     } else {
-      // Valors per defecte segons la pestanya
       if (tab === 'events') {
         setFormData({ title: '', artist: '', description: '', image: '' });
       } else if (tab === 'sessions') {
@@ -113,128 +172,246 @@ export const AdminDashboard = () => {
     );
   });
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 p-8">
-      <div className="absolute inset-0 z-0 opacity-10 [background-image:radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:32px_32px]" />
+  const menuItems = [
+    { id: 'users', label: 'Usuaris', onClick: () => setTab('users') },
+    { id: 'events', label: 'Esdeveniments', onClick: () => setTab('events') },
+    { id: 'sessions', label: 'Sessions', onClick: () => setTab('sessions') },
+  ];
 
-      <div className="max-w-6xl mx-auto relative z-10">
-        
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-          <div>
-            <h1 className="text-3xl font-black text-white tracking-tighter">ADMIN PANEL</h1>
-            <p className="text-slate-500 text-sm mt-1 uppercase tracking-widest font-bold">Gestió de {tab}</p>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex bg-slate-900 border border-white/5 p-1 rounded-xl">
-              {(['users', 'events', 'sessions'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTab(t)}
-                  className={`px-4 md:px-6 py-2 rounded-lg text-xs font-bold transition-all ${
-                    tab === t ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
-                  }`}
-                >
-                  {t.toUpperCase()}
-                </button>
-              ))}
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-200 flex overflow-hidden">
+      {/* BACKGROUND DECORATION */}
+      <div className="fixed inset-0 z-0 opacity-10 [background-image:radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:32px_32px] pointer-events-none" />
+
+      {/* SIDEBAR (Desktop) */}
+      <aside className="hidden lg:flex flex-col w-80 bg-slate-950 border-r border-white/5 h-screen sticky top-0 z-20 p-10 shrink-0">
+        <div className="mb-16">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
+              <LayoutDashboard className="text-white" size={20} />
             </div>
-            <button 
-              onClick={logout}
-              className="p-3 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-all"
-            >
-              <LogOut size={18} />
-            </button>
+            <h1 className="text-2xl font-black text-white tracking-tighter">ADMIN PANEL</h1>
           </div>
-        </header>
+          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] pl-1">Ticketing System v1.0</p>
+        </div>
+
+        <nav className="flex-1">
+           <MenuVertical menuItems={menuItems} activeTab={tab} color="#6366f1" />
+        </nav>
+
+        <div className="mt-auto">
+          <button 
+            onClick={logout}
+            className="group flex items-center gap-4 text-slate-500 hover:text-red-400 transition-all font-bold uppercase text-[10px] tracking-[0.2em]"
+          >
+            <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl group-hover:bg-red-500/10 group-hover:border-red-500/20 transition-all">
+              <LogOut size={18} />
+            </div>
+            <span>Tancar Sessió</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* MOBILE HEADER */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 z-30 px-6 py-4 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <LayoutDashboard className="text-white" size={16} />
+          </div>
+          <h1 className="text-lg font-black text-white tracking-tighter uppercase">Admin</h1>
+        </div>
+        <div className="flex gap-2">
+           <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 bg-slate-900 border border-white/5 text-slate-400 rounded-lg"
+            >
+              <Menu size={20} />
+            </button>
+           <button 
+              onClick={logout}
+              className="p-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg"
+            >
+              <LogOut size={20} />
+            </button>
+        </div>
+      </div>
+
+      {/* MOBILE MENU OVERLAY */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="lg:hidden fixed inset-0 z-20 bg-slate-950 p-6 pt-24 flex flex-col gap-8"
+          >
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={item.onClick}
+                className={`text-left text-4xl font-black uppercase tracking-tighter ${
+                  tab === item.id ? 'text-indigo-500' : 'text-slate-700'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MAIN CONTENT */}
+      <main className="flex-1 overflow-y-auto h-screen relative z-10 pt-20 lg:pt-0">
+        <div className="p-6 md:p-10 lg:p-16 max-w-[1600px] mx-auto w-full">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
+            <div>
+              <h2 className="text-5xl lg:text-7xl font-black text-white tracking-tighter uppercase">
+                {tab}
+              </h2>
+              <div className="flex items-center gap-3 mt-4">
+                <div className="w-12 h-1 bg-indigo-500 rounded-full" />
+                <p className="text-slate-500 text-[10px] uppercase tracking-[0.4em] font-black">Control Panel / {tab}</p>
+              </div>
+            </div>
+            
+            <div className="hidden md:flex items-center gap-4 bg-slate-900/50 p-2 border border-white/5 rounded-2xl backdrop-blur-sm">
+              <div className="px-4 py-2">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Registres Totals</p>
+                <p className="text-xl font-black text-white">{filteredData.length}</p>
+              </div>
+              <div className="w-px h-8 bg-white/5" />
+              <div className="px-4 py-2">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Estat</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                  <p className="text-sm font-bold text-emerald-500 uppercase">En línia</p>
+                </div>
+              </div>
+            </div>
+          </header>
 
         <ContentCard>
-          <div className="p-6 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-900/50 border-b border-white/5">
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
+          <div className="p-6 flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-900/50 border-b border-white/5">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
               <input 
                 type="text" 
-                placeholder={`Cerca ${tab}...`} 
+                placeholder={`Cerca en ${tab}...`} 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-950 border border-white/5 pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-indigo-500 text-sm transition-all text-slate-300"
+                className="w-full bg-slate-950 border border-white/5 pl-12 pr-4 py-3.5 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm transition-all text-slate-300 placeholder:text-slate-700"
               />
             </div>
             
             {tab !== 'users' && (
               <button 
                 onClick={() => openModal()}
-                className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-black text-xs tracking-widest hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20"
+                className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 active:scale-95"
               >
-                <Plus size={16} /> NOU {tab.toUpperCase().slice(0, -1)}
+                <Plus size={18} /> NOU {tab.toUpperCase().slice(0, -1)}
               </button>
             )}
           </div>
 
-          <div className="overflow-x-auto min-h-[400px]">
+          <div className="overflow-x-auto min-h-[500px]">
             <AnimatePresence mode="wait">
               {loading ? (
-                <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-20">
-                  <Loader2 className="animate-spin text-indigo-500 w-10 h-10 mb-2" />
-                  <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Carregant...</p>
+                <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-32">
+                  <Loader2 className="animate-spin text-indigo-500 w-12 h-12 mb-4" />
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">Sincronitzant dades...</p>
                 </motion.div>
               ) : (
-                <motion.table key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full text-left">
-                  <thead className="bg-slate-900/30 text-slate-500 text-[10px] font-black uppercase tracking-widest border-b border-white/5">
+                <motion.table key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full text-left border-collapse">
+                  <thead className="bg-slate-950/50 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-white/5">
                     <tr>
-                      <th className="py-4 px-6">{tab === 'sessions' ? 'Lloc' : 'Nom / Títol'}</th>
-                      <th className="py-4 px-6">Dades Secundàries</th>
-                      <th className="py-4 px-6 text-center">Estat / Detall</th>
-                      <th className="py-4 px-6 text-right">Accions</th>
+                      <th className="py-6 px-8">{tab === 'sessions' ? 'Lloc' : 'Nom / Títol'}</th>
+                      <th className="py-6 px-8">Dades Secundàries</th>
+                      <th className="py-6 px-8 text-center">Estat / Detall</th>
+                      <th className="py-6 px-8 text-right">Accions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-sm">
                     {filteredData.map((item: any) => (
-                      <tr key={item.id} className="hover:bg-white/[0.02] transition-colors group">
-                        <td className="py-4 px-6 font-bold text-slate-200">
+                      <tr key={item.id} className="hover:bg-indigo-500/[0.02] transition-colors group">
+                        <td className="py-6 px-8 font-bold text-slate-200">
                           {tab === 'sessions' ? (
-                            <div className="flex flex-col">
-                              <span>{item.venue}</span>
-                              <span className="text-[10px] text-indigo-400 font-normal">{item.event_title || item.event?.title}</span>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-base">{item.venue}</span>
+                              <div className="flex items-center gap-2">
+                                <div className="w-1 h-1 bg-indigo-500 rounded-full" />
+                                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{item.event_title || item.event?.title}</span>
+                              </div>
                             </div>
-                          ) : (item.name || item.title)}
+                          ) : (
+                            <span className="text-base">{item.name || item.title}</span>
+                          )}
                         </td>
-                        <td className="py-4 px-6 text-slate-500">
-                          {tab === 'users' ? item.email : 
-                           tab === 'events' ? item.artist : 
-                           new Date(item.date_time).toLocaleString('ca-ES')}
+                        <td className="py-6 px-8 text-slate-400 font-medium">
+                          {tab === 'users' ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-slate-800" />
+                              {item.email}
+                            </div>
+                          ) : 
+                           tab === 'events' ? (
+                            <div className="flex items-center gap-2 text-indigo-400/80">
+                              <Music size={14} />
+                              {item.artist}
+                            </div>
+                           ) : (
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} />
+                              {new Date(item.date_time).toLocaleString('ca-ES', { 
+                                day: '2-digit', 
+                                month: '2-digit', 
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </div>
+                          )}
                         </td>
-                        <td className="py-4 px-6 text-center">
+                        <td className="py-6 px-8 text-center">
                           {tab === 'users' ? (
                             <RoleBadge role={item.role} />
                           ) : tab === 'events' ? (
-                            <span className="text-xs font-medium text-slate-400">{item.sessions_count || 0} sessions</span>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-white/5 rounded-full">
+                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.sessions_count || 0} SESSIONS</span>
+                            </div>
                           ) : (
-                            <span className="text-xs font-medium text-indigo-400/80">ID: {item.id}</span>
+                            <span className="text-[10px] font-black text-indigo-400/60 uppercase tracking-widest">REF: #{item.id}</span>
                           )}
                         </td>
-                        <td className="py-4 px-6 text-right">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <td className="py-6 px-8 text-right">
+                          <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
                             {tab !== 'users' && (
                               <button 
                                 onClick={() => openModal(item)}
-                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all"
+                                className="p-2.5 text-slate-400 hover:text-white hover:bg-indigo-600 rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20"
                               >
-                                <Edit3 size={16} />
+                                <Edit3 size={18} />
                               </button>
                             )}
                             <button 
                               onClick={() => handleDelete(item.id)}
-                              className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                              className="p-2.5 text-slate-400 hover:text-white hover:bg-red-600 rounded-xl transition-all shadow-lg hover:shadow-red-600/20"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={18} />
                             </button>
                           </div>
                         </td>
                       </tr>
                     ))}
                     {filteredData.length === 0 && (
-                      <tr><td colSpan={4} className="py-32 text-center text-slate-600 text-sm italic">No s'ha trobat cap registre.</td></tr>
+                      <tr><td colSpan={4} className="py-40 text-center">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center border border-white/5">
+                            <Search className="text-slate-700" size={32} />
+                          </div>
+                          <p className="text-slate-600 text-sm font-bold uppercase tracking-widest italic">No s'ha trobat cap registre en {tab}</p>
+                        </div>
+                      </td></tr>
                     )}
                   </tbody>
                 </motion.table>
@@ -242,98 +419,102 @@ export const AdminDashboard = () => {
             </AnimatePresence>
           </div>
         </ContentCard>
-      </div>
+        </div>
+      </main>
 
       {/* MODAL (Create/Edit) */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeModal}
-              className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" 
+              className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" 
             />
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              initial={{ scale: 0.95, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-lg bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+              exit={{ scale: 0.95, opacity: 0, y: 30 }}
+              className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                <h2 className="text-xl font-black text-white uppercase tracking-tighter">
-                  {editingItem ? 'Editar' : 'Crear'} {tab.slice(0, -1)}
-                </h2>
-                <button onClick={closeModal} className="text-slate-500 hover:text-white transition-colors">
-                  <X size={20} />
+              <div className="p-8 border-b border-white/5 flex justify-between items-center bg-slate-900/50">
+                <div>
+                  <h2 className="text-3xl font-black text-white uppercase tracking-tighter">
+                    {editingItem ? 'Editar' : 'Crear'} {tab.slice(0, -1)}
+                  </h2>
+                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mt-1">Introducció de dades al sistema</p>
+                </div>
+                <button onClick={closeModal} className="p-2 bg-slate-950 border border-white/5 text-slate-500 hover:text-white rounded-xl transition-all hover:rotate-90">
+                  <X size={24} />
                 </button>
               </div>
 
-              <form onSubmit={handleSave} className="p-6 space-y-4">
+              <form onSubmit={handleSave} className="p-8 space-y-6 overflow-y-auto">
                 {tab === 'events' ? (
                   <>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <Music size={12} /> Títol de l'event
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Music size={14} className="text-indigo-500" /> Títol de l'event
                       </label>
                       <input 
                         required
                         type="text" 
                         value={formData.title || ''}
                         onChange={(e) => setFormData({...formData, title: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition-all"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800"
                         placeholder="Ex: Primavera Sound 2026"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <Users size={12} /> Artista / Grup
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <Users size={14} className="text-indigo-500" /> Artista / Grup
                       </label>
                       <input 
                         required
                         type="text" 
                         value={formData.artist || ''}
                         onChange={(e) => setFormData({...formData, artist: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition-all"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800"
                         placeholder="Ex: Arctic Monkeys"
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <ImageIcon size={12} /> URL de la imatge
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <ImageIcon size={14} className="text-indigo-500" /> URL de la imatge
                       </label>
                       <input 
                         type="text" 
                         value={formData.image || ''}
                         onChange={(e) => setFormData({...formData, image: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition-all"
-                        placeholder="https://..."
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800"
+                        placeholder="https://images.unsplash.com/..."
                       />
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <AlertCircle size={12} /> Descripció
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <AlertCircle size={14} className="text-indigo-500" /> Descripció detallada
                       </label>
                       <textarea 
                         value={formData.description || ''}
                         onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition-all h-24 resize-none"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all h-32 resize-none placeholder:text-slate-800"
                         placeholder="Explica de què tracta l'esdeveniment..."
                       />
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <Music size={12} /> Selecciona Event
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <LayoutDashboard size={14} className="text-indigo-500" /> Selecciona l'esdeveniment
                       </label>
                       <select 
                         required
                         value={formData.event_id || ''}
                         onChange={(e) => setFormData({...formData, event_id: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition-all appearance-none"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all appearance-none text-slate-300"
                       >
                         <option value="">-- Selecciona un event --</option>
                         {eventsForSessions.map(ev => (
@@ -341,49 +522,51 @@ export const AdminDashboard = () => {
                         ))}
                       </select>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <Calendar size={12} /> Data i Hora
-                      </label>
-                      <input 
-                        required
-                        type="datetime-local" 
-                        value={formData.date_time ? formData.date_time.slice(0, 16) : ''}
-                        onChange={(e) => setFormData({...formData, date_time: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition-all"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                        <MapPin size={12} /> Lloc (Venue)
-                      </label>
-                      <input 
-                        required
-                        type="text" 
-                        value={formData.venue || ''}
-                        onChange={(e) => setFormData({...formData, venue: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-lg px-4 py-2.5 text-sm focus:border-indigo-500 outline-none transition-all"
-                        placeholder="Ex: Palau Sant Jordi"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                          <Calendar size={14} className="text-indigo-500" /> Data i Hora
+                        </label>
+                        <input 
+                          required
+                          type="datetime-local" 
+                          value={formData.date_time ? formData.date_time.slice(0, 16) : ''}
+                          onChange={(e) => setFormData({...formData, date_time: e.target.value})}
+                          className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all text-slate-300"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                          <MapPin size={14} className="text-indigo-500" /> Lloc (Venue)
+                        </label>
+                        <input 
+                          required
+                          type="text" 
+                          value={formData.venue || ''}
+                          onChange={(e) => setFormData({...formData, venue: e.target.value})}
+                          className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800"
+                          placeholder="Ex: Palau Sant Jordi"
+                        />
+                      </div>
                     </div>
                   </>
                 )}
 
-                <div className="pt-4 flex gap-3">
+                <div className="pt-6 flex gap-4">
                   <button 
                     type="button"
                     onClick={closeModal}
-                    className="flex-1 px-6 py-3 border border-white/5 text-slate-400 font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white/5 transition-all"
+                    className="flex-1 px-8 py-4 border border-white/5 text-slate-500 font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-white/5 transition-all active:scale-95"
                   >
                     Cancel·lar
                   </button>
                   <button 
                     type="submit"
                     disabled={isSaving}
-                    className="flex-1 px-6 py-3 bg-indigo-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+                    className="flex-1 px-8 py-4 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
                   >
-                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                    {editingItem ? 'Guardar Canvis' : 'Crear Registre'}
+                    {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                    {editingItem ? 'Actualitzar' : 'Confirmar'}
                   </button>
                 </div>
               </form>
