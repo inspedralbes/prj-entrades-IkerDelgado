@@ -11,6 +11,8 @@ class Session extends Model
 {
     use HasFactory;
 
+    const UPDATED_AT = null;
+
     protected $fillable = ['event_id', 'date_time', 'venue'];
 
     protected $casts = [

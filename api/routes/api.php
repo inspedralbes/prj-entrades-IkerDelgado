@@ -43,6 +43,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/users', function () {
             return \App\Models\User::all();
         });
+        Route::delete('/users/{id}', function ($id) {
+            $user = \App\Models\User::findOrFail($id);
+            if ($user->role === 'admin') {
+                return response()->json(['message' => 'No es pot eliminar un administrador'], 403);
+            }
+            $user->delete();
+            return response()->json(['message' => 'Usuari eliminat correctament']);
+        });
 
         // CRUD de eventos
         Route::post('/events', [EventController::class, 'store']);
@@ -50,7 +58,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/events/{id}', [EventController::class, 'destroy']);
 
         // Gestión de sesiones
+        Route::get('/sessions', [SessionController::class, 'index']);
         Route::post('/sessions', [SessionController::class, 'store']);
+        Route::put('/sessions/{id}', [SessionController::class, 'update']);
+        Route::delete('/sessions/{id}', [SessionController::class, 'destroy']);
     });
 
 });

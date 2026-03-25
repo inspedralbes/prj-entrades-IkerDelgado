@@ -10,6 +10,8 @@ class SeatStatus extends Model
 {
     use HasFactory;
 
+    public $timestamps = false;
+
     protected $table = 'seat_status';
 
     protected $fillable = [

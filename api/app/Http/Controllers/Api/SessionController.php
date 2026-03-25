@@ -13,6 +13,12 @@ use Carbon\Carbon;
 
 class SessionController extends Controller
 {
+    public function index()
+    {
+        $sessions = Session::with('event')->get();
+        return SessionResource::collection($sessions);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -37,15 +43,13 @@ class SessionController extends Controller
                 return [
                     'session_id' => $session->id,
                     'seat_id' => $seat->id,
-                    'status' => 'available',
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'status' => 'available'
                 ];
             })->toArray();
 
             SeatStatus::insert($seatStatuses); // Inserció ràpida en un sol bloc
 
-            return new SessionResource($session);
+            return new SessionResource($session->load('event'));
         });
     }
 
@@ -53,5 +57,33 @@ class SessionController extends Controller
     {
         $session = Session::with('event')->findOrFail($id);
         return new SessionResource($session);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $session = Session::findOrFail($id);
+
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'date_time' => 'required|date',
+            'venue' => 'required|string|max:255',
+        ]);
+
+        $session->update([
+            'event_id' => $validated['event_id'],
+            'date_time' => Carbon::parse($validated['date_time']),
+            'venue' => $validated['venue'],
+        ]);
+
+        return new SessionResource($session);
+    }
+
+    public function destroy($id)
+    {
+        $session = Session::findOrFail($id);
+        // Al borrar la sessió, Laravel borrarà les disponibilitats si tenim ON DELETE CASCADE, 
+        // o les hauríem de borrar manualment si no. Suposem que la BD està ben muntada.
+        $session->delete();
+        return response()->json(['message' => 'Sessió eliminada correctament']);
     }
 }

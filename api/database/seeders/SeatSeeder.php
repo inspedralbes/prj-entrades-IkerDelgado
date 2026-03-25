@@ -4,13 +4,15 @@ namespace Database\Seeders;
 
 use App\Models\Seat;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Schema;
 
 class SeatSeeder extends Seeder
 {
     public function run(): void
     {
-        // Netegem la taula primer si cal
+        Schema::disableForeignKeyConstraints();
         Seat::truncate();
+        Schema::enableForeignKeyConstraints();
 
         $seats = [];
 

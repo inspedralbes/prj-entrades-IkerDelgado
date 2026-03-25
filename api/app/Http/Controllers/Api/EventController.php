@@ -33,4 +33,26 @@ class EventController extends Controller
         $event = Event::with('sessions')->findOrFail($id);
         return new EventResource($event);
     }
+
+    public function update(Request $request, $id)
+    {
+        $event = Event::findOrFail($id);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'artist' => 'required|string|max:255',
+            'image' => 'nullable|string',
+            'description' => 'nullable|string',
+        ]);
+
+        $event->update($validated);
+        return new EventResource($event);
+    }
+
+    public function destroy($id)
+    {
+        $event = Event::findOrFail($id);
+        $event->delete();
+        return response()->json(['message' => 'Event eliminat correctament']);
+    }
 }
