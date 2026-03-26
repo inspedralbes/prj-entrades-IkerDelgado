@@ -11,6 +11,8 @@ class Session extends Model
 {
     use HasFactory;
 
+    protected $table = 'event_sessions';
+
     const UPDATED_AT = null;
 
     protected $fillable = ['event_id', 'date_time', 'venue'];

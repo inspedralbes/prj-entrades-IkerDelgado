@@ -33,6 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
+    // Ruta de compra
+    Route::post('/purchase', [\App\Http\Controllers\Api\PurchaseController::class, 'purchase']);
+
     /*
     |----------------------------------------------------------------------
     | Admin Only Routes

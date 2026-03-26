@@ -13,10 +13,11 @@ class EventResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'artist' => $this->artist,
-            'image_url' => $this->image,
+            'image' => $this->image, // Tornem a usar 'image' per coherència
             'description' => $this->description,
-            'sessions_count' => $this->whenCounted('sessions'),
-            'created_at' => $this->created_at->format('Y-m-d H:i:s'),
+            'sessions' => SessionResource::collection($this->whenLoaded('sessions')),
+            'sessions_count' => $this->sessions_count,
+            'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
         ];
     }
 }

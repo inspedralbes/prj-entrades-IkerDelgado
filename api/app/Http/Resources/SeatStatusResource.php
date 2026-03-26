@@ -15,6 +15,7 @@ class SeatStatusResource extends JsonResource
             'seat_id' => $this->seat_id,
             'row' => $this->seat->row_number,
             'number' => $this->seat->seat_number,
+            'price' => $this->seat->price, // Enviem el preu a la vista
             'status' => $this->status,
             'locked_at' => $this->locked_at ? $this->locked_at->toIso8601String() : null,
         ];

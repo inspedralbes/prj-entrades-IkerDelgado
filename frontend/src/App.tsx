@@ -4,22 +4,10 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
-// Un Dashboard simple per al client (temporal)
-const ClientDashboard = () => {
-  const { user, logout } = useAuth();
-  return (
-    <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6">
-      <h1 className="text-4xl font-black mb-4">HOLA, {user?.name?.toUpperCase()}!</h1>
-      <p className="text-slate-400 mb-8">Benvingut a la teva plataforma de concerts.</p>
-      <button 
-        onClick={logout}
-        className="px-6 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 transition-all"
-      >
-        Tancar Sessió
-      </button>
-    </div>
-  );
-};
+// Importacions del Client
+import { EventDashboard } from './pages/client/EventDashboard';
+import { EventDetail } from './pages/client/EventDetail';
+import { SeatSelection } from './pages/client/SeatSelection';
 
 function AppRoutes() {
   const { isAuthenticated, user, loading } = useAuth();
@@ -55,7 +43,23 @@ function AppRoutes() {
         path="/dashboard" 
         element={
           <ProtectedRoute role="client">
-            <ClientDashboard />
+            <EventDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/event/:id" 
+        element={
+          <ProtectedRoute role="client">
+            <EventDetail />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/session/:id/seats" 
+        element={
+          <ProtectedRoute role="client">
+            <SeatSelection />
           </ProtectedRoute>
         } 
       />

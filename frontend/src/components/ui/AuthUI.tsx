@@ -229,22 +229,19 @@ function SignInForm() {
 
       console.log("Resposta completa del servidor:", response);
 
-      // Laravel a vegades envolta la resposta en un objecte "data"
-      const userData = response.user || response.data?.user;
-      const token = response.access_token || response.data?.access_token;
+      const userData = response.user;
+      const token = response.access_token;
 
-      if (!token) {
-        throw new Error("No s'ha rebut cap token del servidor.");
+      if (!token || !userData) {
+        throw new Error("S'ha iniciat la sessió però falten dades del servidor.");
       }
 
       login(userData, token);
 
-      // Forçar la redirecció segons el rol
-      const destination = userData.role === "admin" ? "/admin" : "/dashboard";
-      navigate(destination);
+      // Redirecció
+      navigate(userData.role === "admin" ? "/admin" : "/dashboard");
 
     } catch (err: any) {
-
       setError(err.message || "Error a l'iniciar sessió");
     } finally {
       setLoading(false);
@@ -333,7 +330,7 @@ function SignUpForm() {
     setError("");
 
     try {
-      const data = await apiFetch("/register", {
+      const response = await apiFetch("/register", {
         method: "POST",
         body: JSON.stringify({
           name,
@@ -343,8 +340,23 @@ function SignUpForm() {
         }),
       });
 
-      login(data.user, data.access_token);
-      navigate(data.user?.role === "admin" ? "/admin" : "/dashboard");
+      console.log("Resposta registre:", response);
+
+      // Extracció flexible: comprovem l'arrel i també l'objecte "data" si existís
+      const userData = response.user || response.data?.user;
+      const token = response.access_token || response.data?.access_token;
+
+      if (!token || !userData) {
+        console.error("Dades mancants en la resposta:", response);
+        throw new Error("S'ha creat la compte però falten dades del servidor.");
+      }
+
+      login(userData, token);
+
+      // Redirecció intel·ligent segons el rol
+      const destination = userData.role === "admin" ? "/admin" : "/dashboard";
+      navigate(destination);
+
     } catch (err: any) {
       if (err.errors) {
         const messages = Object.values(err.errors).flat();
