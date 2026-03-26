@@ -3,11 +3,16 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { CookieConsent } from './components/ui/CookieConsent';
 
 // Importacions del Client
 import { EventDashboard } from './pages/client/EventDashboard';
 import { EventDetail } from './pages/client/EventDetail';
 import { SeatSelection } from './pages/client/SeatSelection';
+
+// Pàgines legals
+import { PrivacyPolicy } from './pages/legal/PrivacyPolicy';
+import { TermsOfService } from './pages/legal/TermsOfService';
 
 function AppRoutes() {
   const { isAuthenticated, user, loading } = useAuth();
@@ -64,6 +69,10 @@ function AppRoutes() {
         } 
       />
 
+      {/* Pàgines legals (públiques) */}
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
+
       {/* Redirecció per defecte */}
       <Route path="*" element={<Navigate to="/login" />} />
     </Routes>
@@ -75,6 +84,7 @@ export default function App() {
     <AuthProvider>
       <Router>
         <AppRoutes />
+        <CookieConsent />
       </Router>
     </AuthProvider>
   );
