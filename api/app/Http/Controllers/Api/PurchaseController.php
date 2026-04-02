@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SeatStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 
 class PurchaseController extends Controller
 {
@@ -19,9 +20,16 @@ class PurchaseController extends Controller
         $user = $request->user();
 
         return DB::transaction(function () use ($request, $user) {
+            // Un seient es pot comprar si està 'available' O si està 'locked' pel mateix usuari
             $seatStatuses = SeatStatus::whereIn('id', $request->seat_status_ids)
-                ->where('status', 'available')
-                ->lockForUpdate() // Evita que altres compren els mateixos alhora
+                ->where(function ($query) use ($user) {
+                    $query->where('status', 'available')
+                          ->orWhere(function ($q) use ($user) {
+                              $q->where('status', 'locked')
+                                ->where('user_id', $user->id);
+                          });
+                })
+                ->lockForUpdate()
                 ->get();
 
             if ($seatStatuses->count() !== count($request->seat_status_ids)) {
@@ -34,8 +42,15 @@ class PurchaseController extends Controller
                 $status->update([
                     'status' => 'sold',
                     'user_id' => $user->id,
-                    'locked_at' => null // Per si estigués bloquejat per socket
+                    'locked_at' => null
                 ]);
+
+                // Notificar a tots que el seient s'ha venut
+                Redis::publish('seat-updates', json_encode([
+                    'event' => 'seat-purchased',
+                    'sessionId' => $status->session_id,
+                    'seatStatusIds' => [$status->id] // Es pot enviar array o single
+                ]));
             }
 
             return response()->json([

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Ticket, Armchair, Info, ShoppingCart } from 'lucide-react';
 import api from '../../api/axios';
+import { useSocketContext } from '../../context/SocketContext';
 
 interface Seat {
     id: number;
@@ -18,6 +19,14 @@ export const SeatSelection = () => {
     const [selectedSeats, setSelectedSeats] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const { socket, joinSession, leaveSession } = useSocketContext();
+
+    useEffect(() => {
+        if (sessionId) {
+            joinSession(sessionId);
+        }
+        // No fem leaveSession al cleanup d'aquí perquè volem que segueixi a la room al Checkout
+    }, [sessionId]);
 
     useEffect(() => {
         setLoading(true);
@@ -30,6 +39,36 @@ export const SeatSelection = () => {
             .finally(() => setLoading(false));
     }, [sessionId]);
 
+    // Escoltant events de Sockets per a temps real
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('seat-locked', ({ seatStatusId }) => {
+            setSeats(prev => prev.map(s => s.id === seatStatusId ? { ...s, status: 'locked' } : s));
+        });
+
+        socket.on('seat-unlocked', ({ seatStatusId }) => {
+            setSeats(prev => prev.map(s => s.id === seatStatusId ? { ...s, status: 'available' } : s));
+        });
+
+        socket.on('lock-expired', ({ seatStatusId }) => {
+            setSeats(prev => prev.map(s => s.id === seatStatusId ? { ...s, status: 'available' } : s));
+            // Si l'usuari el tenia seleccionat, treure'l (opcional)
+            setSelectedSeats(prev => prev.filter(id => id !== seatStatusId));
+        });
+
+        socket.on('seat-purchased', ({ seatStatusIds }) => {
+            setSeats(prev => prev.map(s => seatStatusIds.includes(s.id) ? { ...s, status: 'sold' } : s));
+        });
+
+        return () => {
+            socket.off('seat-locked');
+            socket.off('seat-unlocked');
+            socket.off('lock-expired');
+            socket.off('seat-purchased');
+        };
+    }, [socket]);
+
     const toggleSeat = (seatId: number) => {
         setSelectedSeats(prev => 
             prev.includes(seatId) ? prev.filter(id => id !== seatId) : [...prev, seatId]
@@ -41,14 +80,27 @@ export const SeatSelection = () => {
         .filter(s => selectedSeats.includes(s.id))
         .reduce((sum, s) => sum + Number(s.price), 0);
 
-    const handlePurchase = async () => {
+    const handleGoToCheckout = async () => {
         if (selectedSeats.length === 0) return;
         try {
-            await api.post('/purchase', { seat_status_ids: selectedSeats });
-            alert('Compra realitzada amb èxit!');
-            navigate('/dashboard');
-        } catch (error) {
-            alert('Error en la compra. Torna-ho a intentar.');
+            // Primer bloquegem els seients a l'API
+            await api.post('/seats/lock', { 
+                session_id: sessionId, 
+                seat_status_ids: selectedSeats 
+            });
+            
+            // Si té èxit, naveguem a la nova pàgina de checkout passant els seients seleccionats
+            navigate(`/session/${sessionId}/checkout`, { 
+                state: { 
+                    selectedSeats: selectedSeats,
+                    seatsInfo: seats.filter(s => selectedSeats.includes(s.id)),
+                    totalPrice: totalPrice
+                } 
+            });
+        } catch (error: any) {
+            alert(error.response?.data?.message || 'Error bloquejant els seients. Algú potser s\'ha avançat!');
+            // Recarregar seients per actualitzar estats
+            api.get(`/seats?session_id=${sessionId}`).then(res => setSeats(res.data.data || res.data));
         }
     };
 
@@ -97,6 +149,7 @@ export const SeatSelection = () => {
                             className={`
                                 relative group w-12 h-12 rounded-xl flex flex-col items-center justify-center transition-all duration-300
                                 ${seat.status === 'sold' ? 'bg-slate-800/50 text-slate-700 cursor-not-allowed opacity-50' : 
+                                  seat.status === 'locked' ? 'bg-orange-500/50 text-orange-200 cursor-not-allowed shadow-lg shadow-orange-500/20' :
                                   selectedSeats.includes(seat.id) ? 'bg-indigo-600 text-white scale-110 shadow-2xl shadow-indigo-600/50 z-10 ring-4 ring-white/20' : 
                                   'bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white'}
                             `}
@@ -109,6 +162,12 @@ export const SeatSelection = () => {
                                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-white text-black px-3 py-1.5 rounded-xl text-[10px] font-black opacity-0 group-hover:opacity-100 pointer-events-none transition-all flex flex-col items-center shadow-xl z-50">
                                     <span className="text-indigo-600">{Number(seat.price).toFixed(2)}€</span>
                                     <span className="text-[8px] text-slate-400">LLIURE</span>
+                                </div>
+                            )}
+
+                            {seat.status === 'locked' && (
+                                <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-3 py-1.5 rounded-xl text-[10px] font-black opacity-0 group-hover:opacity-100 pointer-events-none transition-all flex flex-col items-center shadow-xl z-50">
+                                    <span>RESERVAT</span>
                                 </div>
                             )}
                         </motion.button>
@@ -124,7 +183,10 @@ export const SeatSelection = () => {
                         <div className="w-4 h-4 bg-indigo-600 rounded-md" /> <span>Seleccionat</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest">
-                        <div className="w-4 h-4 bg-slate-800 opacity-50 rounded-md" /> <span>Ocupat</span>
+                        <div className="w-4 h-4 bg-orange-500 opacity-50 rounded-md" /> <span>Reservat</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest">
+                        <div className="w-4 h-4 bg-slate-800 opacity-50 rounded-md" /> <span>Venut</span>
                     </div>
                 </div>
             </main>
@@ -153,7 +215,7 @@ export const SeatSelection = () => {
                                 </div>
                             </div>
                             <button 
-                                onClick={handlePurchase}
+                                onClick={handleGoToCheckout}
                                 className="bg-indigo-600 text-white px-10 py-5 rounded-2xl font-black text-lg hover:bg-indigo-700 transition-all active:scale-95 shadow-xl shadow-indigo-600/20"
                             >
                                 COMPRAR ARA

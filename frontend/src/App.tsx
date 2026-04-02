@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -9,6 +10,7 @@ import { CookieConsent } from './components/ui/CookieConsent';
 import { EventDashboard } from './pages/client/EventDashboard';
 import { EventDetail } from './pages/client/EventDetail';
 import { SeatSelection } from './pages/client/SeatSelection';
+import { CheckoutPage } from './pages/client/CheckoutPage';
 
 // Pàgines legals
 import { PrivacyPolicy } from './pages/legal/PrivacyPolicy';
@@ -68,6 +70,14 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/session/:id/checkout" 
+        element={
+          <ProtectedRoute role="client">
+            <CheckoutPage />
+          </ProtectedRoute>
+        } 
+      />
 
       {/* Pàgines legals (públiques) */}
       <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -83,8 +93,10 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <AppRoutes />
-        <CookieConsent />
+        <SocketProvider>
+          <AppRoutes />
+          <CookieConsent />
+        </SocketProvider>
       </Router>
     </AuthProvider>
   );

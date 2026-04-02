@@ -33,7 +33,9 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    // Ruta de compra
+    // Rutas de asientos y compra
+    Route::post('/seats/lock', [SeatController::class, 'lock']);
+    Route::post('/seats/unlock', [SeatController::class, 'unlock']);
     Route::post('/purchase', [\App\Http\Controllers\Api\PurchaseController::class, 'purchase']);
 
     /*
