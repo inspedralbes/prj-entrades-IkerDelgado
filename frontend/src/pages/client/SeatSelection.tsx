@@ -44,6 +44,7 @@ export const SeatSelection = () => {
 
         socket.on('seat-locked', ({ seatStatusId }) => {
             setSeats(prev => prev.map(s => s.id === seatStatusId ? { ...s, status: 'locked' } : s));
+            setSelectedSeats(prev => prev.filter(id => id !== seatStatusId));
         });
 
         socket.on('seat-unlocked', ({ seatStatusId }) => {
@@ -57,6 +58,7 @@ export const SeatSelection = () => {
 
         socket.on('seat-purchased', ({ seatStatusIds }) => {
             setSeats(prev => prev.map(s => seatStatusIds.includes(s.id) ? { ...s, status: 'sold' } : s));
+            setSelectedSeats(prev => prev.filter(id => !seatStatusIds.includes(id)));
         });
 
         return () => {
@@ -171,7 +173,7 @@ export const SeatSelection = () => {
                             `}
                         >
                             <Armchair className={`w-6 h-6 ${selectedSeats.includes(seat.id) ? 'animate-pulse' : 'group-hover:scale-110 transition-transform'}`} />
-                            <span className="text-[9px] font-black mt-1 opacity-50 group-hover:opacity-100 transition-opacity">{seat.row}{seat.number}</span>
+                            <span className="text-[9px] font-black mt-1 opacity-50 group-hover:opacity-100 transition-opacity">{index + 1}</span>
                             
                             {/* Tooltip mejorado */}
                             <AnimatePresence>

@@ -75,7 +75,7 @@ const MenuVertical = ({
 type TabType = 'users' | 'events' | 'sessions' | 'reports';
 
 export const AdminDashboard = () => {
-  const [tab, setTab] = useState<TabType>('users');
+  const [tab, setTab] = useState<TabType>('reports');
   const [data, setData] = useState<any[]>([]);
   const [eventsForSessions, setEventsForSessions] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -206,10 +206,10 @@ export const AdminDashboard = () => {
   });
 
   const menuItems = [
+    { id: 'reports', label: 'Informes', onClick: () => setTab('reports') },
     { id: 'users', label: ca.admin.users, onClick: () => setTab('users') },
     { id: 'events', label: ca.admin.events, onClick: () => setTab('events') },
     { id: 'sessions', label: ca.admin.sessions, onClick: () => setTab('sessions') },
-    { id: 'reports', label: 'Informes', onClick: () => setTab('reports') },
   ];
 
   return (
@@ -269,13 +269,13 @@ export const AdminDashboard = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="lg:hidden fixed inset-0 z-20 bg-slate-950 p-6 pt-24 flex flex-col gap-8"
+            className="lg:hidden fixed inset-0 z-20 bg-slate-950 p-6 pt-24 flex flex-col gap-6"
           >
             {menuItems.map((item) => (
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`text-left text-5xl font-black uppercase italic tracking-tighter ${
+                className={`text-left text-3xl font-black uppercase italic tracking-tighter ${
                   tab === item.id ? 'text-indigo-500' : 'text-slate-800'
                 }`}
               >
@@ -296,15 +296,12 @@ export const AdminDashboard = () => {
       <main className="flex-1 overflow-y-auto h-screen relative z-10 pt-24 lg:pt-0">
         <div className="p-6 md:p-10 lg:p-16 max-w-[1600px] mx-auto w-full">
           
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16 md:min-h-[96px]">
             <motion.div
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
             >
-              <h2 className="text-6xl lg:text-8xl font-black text-white tracking-tighter uppercase italic">
-                {tab}
-              </h2>
-              <div className="flex items-center gap-4 mt-6">
+              <div className="flex items-center gap-4">
                 <div className="w-16 h-1 bg-indigo-500 rounded-full animate-shimmer" />
                 <p className="text-slate-500 text-[10px] uppercase tracking-[0.5em] font-black">Control Panel / {tab}</p>
               </div>

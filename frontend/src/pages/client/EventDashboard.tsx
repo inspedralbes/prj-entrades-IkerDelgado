@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Music2, Calendar, MapPin, Ticket } from 'lucide-react';
+import { ArrowRight, Music2, Calendar, MapPin, Ticket, LogOut } from 'lucide-react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { useSocketContext } from '../../context/SocketContext';
@@ -94,14 +94,16 @@ export const EventDashboard = () => {
                             className="flex items-center gap-2 text-xs font-black text-indigo-400 hover:text-white transition-all uppercase tracking-widest border border-indigo-500/20 px-4 py-2 rounded-xl bg-indigo-500/5"
                         >
                             <Ticket size={14} />
-                            Mis entradas
+                            Les meves entrades
                         </button>
                         <span className="hidden md:block text-xs font-bold text-slate-400 uppercase tracking-widest">{user?.name}</span>
                         <button 
                             onClick={logout}
-                            className="text-xs font-bold text-slate-500 hover:text-white transition-all uppercase tracking-widest"
+                            className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-white transition-all uppercase tracking-widest p-2 md:p-0"
+                            title={ca.common.logout}
                         >
-                            {ca.common.logout}
+                            <LogOut size={18} className="md:hidden" />
+                            <span className="hidden md:block">{ca.common.logout}</span>
                         </button>
                     </div>
                 </div>
@@ -122,10 +124,10 @@ export const EventDashboard = () => {
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
-                        className="text-5xl md:text-8xl font-black text-white mb-8 tracking-tighter leading-[0.85] uppercase italic whitespace-nowrap"
+                        className="text-4xl md:text-6xl font-black text-white mb-8 tracking-tighter leading-[0.85] uppercase italic pr-4"
                     >
                         {ca.client.upcoming_events.split(' ')[0]}{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-400 to-cyan-400 animate-shimmer">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-400 to-cyan-400 pr-2 md:pr-4">
                             {ca.client.upcoming_events.split(' ')[1]}
                         </span>
                     </motion.h1>
@@ -133,7 +135,7 @@ export const EventDashboard = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-slate-400 max-w-2xl text-xl leading-relaxed font-medium"
+                        className="text-slate-400 max-w-2xl text-lg leading-relaxed font-medium"
                     >
                         {ca.client.hero_description}
                     </motion.p>
@@ -173,24 +175,24 @@ export const EventDashboard = () => {
                                 >
                                     <div 
                                         onClick={() => navigate(`/event/${event.id}`)}
-                                        className="flex flex-col md:flex-row h-full min-h-[320px]"
+                                        className="flex flex-col sm:flex-row h-full min-h-[320px]"
                                     >
                                         {/* Image Section */}
-                                        <div className="relative w-full md:w-[300px] flex-shrink-0 overflow-hidden">
+                                        <div className="relative w-full sm:w-[240px] md:w-[300px] flex-shrink-0 overflow-hidden">
                                             {event.image ? (
                                                 <img 
                                                     src={event.image} 
                                                     alt={event.title} 
-                                                    className="w-full h-[240px] md:h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" 
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" 
                                                 />
                                             ) : (
-                                                <div className="w-full h-[240px] md:h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                                                <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
                                                     <Music2 className="text-slate-700 w-12 h-12" />
                                                 </div>
                                             )}
                                             {/* Image gradient overlay */}
-                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-slate-950/90 hidden md:block" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent md:hidden" />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-slate-950/90 hidden sm:block" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent sm:hidden" />
                                             
                                             {/* Badge */}
                                             <div className="absolute top-6 left-6">
@@ -202,9 +204,9 @@ export const EventDashboard = () => {
                                         </div>
 
                                         {/* Content Section */}
-                                        <div className="flex-1 p-8 md:p-10 flex flex-col justify-between relative">
+                                        <div className="flex-1 p-8 sm:p-10 flex flex-col justify-between relative">
                                             <div>
-                                                <h2 className="text-3xl md:text-4xl font-black text-white leading-[0.9] mb-4 group-hover:text-indigo-400 transition-colors uppercase tracking-tighter italic">
+                                                <h2 className="text-3xl font-black text-white leading-[0.9] mb-4 group-hover:text-indigo-400 transition-colors uppercase tracking-tighter italic">
                                                     {event.title}
                                                 </h2>
                                                 <div className="flex items-center gap-2 text-indigo-400 font-black text-sm uppercase tracking-widest mb-6">
@@ -220,7 +222,7 @@ export const EventDashboard = () => {
 
                                             {/* CTA Button */}
                                             <div className="mt-8">
-                                                <button className="w-full md:w-auto inline-flex items-center justify-center gap-3 px-10 py-4 bg-indigo-600 text-white font-black text-xs tracking-[0.2em] rounded-2xl group-hover:bg-indigo-500 transition-all duration-300 shadow-xl shadow-indigo-600/20 group-hover:shadow-indigo-500/40 active:scale-[0.97]">
+                                                <button className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-4 bg-indigo-600 text-white font-black text-xs tracking-[0.2em] rounded-2xl group-hover:bg-indigo-500 transition-all duration-300 shadow-xl shadow-indigo-600/20 group-hover:shadow-indigo-500/40 active:scale-[0.97]">
                                                     {ca.client.reserve_now}
                                                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                                 </button>

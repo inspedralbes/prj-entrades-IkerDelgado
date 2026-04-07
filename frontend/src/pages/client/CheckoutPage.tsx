@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, CreditCard, User, Mail, MapPin, Clock, ShieldCheck, ShoppingBag, Sparkles, Loader2 } from 'lucide-react';
+import { ChevronLeft, CreditCard, User, Mail, MapPin, Clock, ShieldCheck, Loader2 } from 'lucide-react';
 import api from '../../api/axios';
 import { useSocketContext } from '../../context/SocketContext';
 import { ca } from '../../locales/ca';
@@ -112,13 +112,15 @@ export const CheckoutPage = () => {
             className="min-h-screen text-slate-200 p-6 md:p-12 lg:p-16"
         >
             <header className="max-w-6xl mx-auto flex items-center justify-between mb-16">
-                <button 
-                    onClick={handleCancel} 
-                    className="group p-4 bg-white/5 hover:bg-red-500/20 rounded-2xl transition-all border border-white/5 flex items-center gap-3 text-[10px] font-black tracking-[0.2em] shadow-xl hover:shadow-red-500/10 active:scale-95"
-                >
-                    <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> CANCEL·LAR
-                </button>
-                <div className="text-center">
+                <div className="flex-1 flex justify-start">
+                    <button 
+                        onClick={handleCancel} 
+                        className="group p-4 bg-white/5 hover:bg-red-500/20 rounded-2xl transition-all border border-white/5 flex items-center gap-3 text-[10px] font-black tracking-[0.2em] shadow-xl hover:shadow-red-500/10 active:scale-95"
+                    >
+                        <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" /> CANCEL·LAR
+                    </button>
+                </div>
+                <div className="text-center shrink-0">
                     <h1 className="text-4xl md:text-5xl font-black text-white uppercase italic tracking-tighter">Finalitzar Compra</h1>
                     <motion.div 
                         initial={{ scale: 0.9, opacity: 0 }}
@@ -129,11 +131,7 @@ export const CheckoutPage = () => {
                         <span className="font-black text-xl italic tracking-tighter leading-none">{formatTime(timeLeft)} <span className="text-xs uppercase tracking-widest opacity-50 ml-1">restants</span></span>
                     </motion.div>
                 </div>
-                <div className="hidden md:flex w-[120px] justify-end">
-                    <div className="w-12 h-12 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center">
-                        <ShoppingBag className="text-indigo-400" size={20} />
-                    </div>
-                </div>
+                <div className="flex-1" />
             </header>
 
             <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -254,15 +252,9 @@ export const CheckoutPage = () => {
                         </div>
 
                         <div className="pt-10 border-t-4 border-slate-50 mb-12 relative z-10">
-                            <div className="flex justify-between items-end">
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2 leading-none">Total a pagar</p>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-black text-indigo-600 uppercase tracking-widest leading-none">FINAL</span>
-                                        <div className="w-8 h-1 bg-indigo-600/10 rounded-full" />
-                                    </div>
-                                </div>
-                                <p className="text-6xl font-black tracking-tighter italic">{totalPrice.toFixed(2)}€</p>
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4 leading-none">Total a pagar</p>
+                                <p className="text-5xl font-black tracking-tighter italic leading-none">{totalPrice.toFixed(2)}<span className="text-xl ml-1 not-italic opacity-50">€</span></p>
                             </div>
                         </div>
 
@@ -277,10 +269,7 @@ export const CheckoutPage = () => {
                             {isSubmitting ? (
                                 <Loader2 className="animate-spin" size={32} />
                             ) : (
-                                <>
-                                    <span>{ca.client.buy_now}</span>
-                                    <Sparkles className="w-8 h-8 group-hover:rotate-12 transition-transform" />
-                                </>
+                                <span>{ca.client.buy_now}</span>
                             )}
                         </button>
                         
