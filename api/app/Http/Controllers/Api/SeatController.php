@@ -34,6 +34,11 @@ class SeatController extends Controller
 
         $user = $request->user();
 
+        // Validació de límit de seients (Requisit 5.3)
+        if (count($request->seat_status_ids) > 5) {
+            return response()->json(['message' => 'No pots bloquejar més de 5 seients alhora.'], 422);
+        }
+
         return DB::transaction(function () use ($request, $user) {
             $seats = SeatStatus::whereIn('id', $request->seat_status_ids)
                 ->where('session_id', $request->session_id)
