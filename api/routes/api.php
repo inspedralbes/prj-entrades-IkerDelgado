@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/seats/lock', [SeatController::class, 'lock']);
     Route::post('/seats/unlock', [SeatController::class, 'unlock']);
     Route::post('/purchase', [\App\Http\Controllers\Api\PurchaseController::class, 'purchase']);
+    Route::get('/my-tickets', [\App\Http\Controllers\Api\UserController::class, 'myTickets']);
 
     /*
     |----------------------------------------------------------------------
@@ -44,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     |----------------------------------------------------------------------
     */
     Route::middleware('role:admin')->group(function () {
+        Route::get('/admin/stats', [\App\Http\Controllers\Api\AdminController::class, 'stats']);
         // Gestió d'usuaris
         Route::get('/users', function () {
             return \App\Models\User::all();

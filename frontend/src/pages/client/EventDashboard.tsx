@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Music2, Calendar, MapPin, Ticket } from 'lucide-react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
+import { useSocketContext } from '../../context/SocketContext';
 import { SpotlightCard } from '../../components/ui/SpotlightCard';
 import { Footer } from '../../components/ui/Footer';
+import { ca } from '../../locales/ca';
 
 interface Event {
     id: number;
@@ -20,8 +22,9 @@ export const EventDashboard = () => {
     const [loading, setLoading] = useState(true);
     const { logout, user } = useAuth();
     const navigate = useNavigate();
+    const { socket, joinDashboard } = useSocketContext();
 
-    useEffect(() => {
+    const fetchEvents = () => {
         api.get('/events')
             .then(res => {
                 const data = res.data.data || res.data;
@@ -29,104 +32,135 @@ export const EventDashboard = () => {
             })
             .catch(err => console.error("Error carregant esdeveniments:", err))
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchEvents();
+        joinDashboard();
     }, []);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('catalog-changed', (data) => {
+            console.log('Catalog changed real-time:', data);
+            fetchEvents();
+        });
+
+        return () => {
+            socket.off('catalog-changed');
+        };
+    }, [socket]);
 
     const containerVariants = {
         hidden: { opacity: 0 },
         visible: {
             opacity: 1,
-            transition: { staggerChildren: 0.15, delayChildren: 0.1 }
+            transition: { staggerChildren: 0.1, delayChildren: 0.2 }
         }
     };
 
     const itemVariants = {
-        hidden: { y: 30, opacity: 0 },
+        hidden: { y: 20, opacity: 0 },
         visible: { 
             y: 0, 
             opacity: 1,
-            transition: { type: 'spring' as const, stiffness: 100, damping: 15 }
+            transition: { type: 'spring', stiffness: 100, damping: 15 }
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-indigo-500/30">
-            {/* Ambient background effects */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/[0.07] rounded-full blur-[120px]" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-cyan-500/[0.05] rounded-full blur-[120px]" />
-            </div>
-
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="min-h-screen text-slate-200 selection:bg-indigo-500/30"
+        >
             {/* Navbar */}
-            <nav className="sticky top-0 z-50 bg-slate-950/70 backdrop-blur-2xl border-b border-white/[0.06] px-6 py-4">
+            <nav className="sticky top-0 z-50 bg-slate-950/40 backdrop-blur-xl border-b border-white/[0.04] px-6 py-4">
                 <div className="max-w-[1400px] mx-auto flex justify-between items-center">
-                    <span 
-                        className="text-xl font-black tracking-tighter text-white cursor-pointer" 
+                    <motion.span 
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        className="text-2xl font-black tracking-tighter text-white cursor-pointer group" 
                         onClick={() => navigate('/dashboard')}
                     >
-                        TICKET<span className="text-indigo-400">HUB</span>
-                    </span>
+                        TICKET<span className="text-indigo-500 group-hover:text-cyan-400 transition-colors">HUB</span>
+                    </motion.span>
                     
-                    <div className="flex items-center gap-5">
-                        <span className="hidden md:block text-sm text-slate-400">{user?.name}</span>
+                    <div className="flex items-center gap-6">
+                        <button 
+                            onClick={() => navigate('/my-tickets')}
+                            className="flex items-center gap-2 text-xs font-black text-indigo-400 hover:text-white transition-all uppercase tracking-widest border border-indigo-500/20 px-4 py-2 rounded-xl bg-indigo-500/5"
+                        >
+                            <Ticket size={14} />
+                            Mis entradas
+                        </button>
+                        <span className="hidden md:block text-xs font-bold text-slate-400 uppercase tracking-widest">{user?.name}</span>
                         <button 
                             onClick={logout}
-                            className="text-sm text-slate-500 hover:text-white transition-colors"
+                            className="text-xs font-bold text-slate-500 hover:text-white transition-all uppercase tracking-widest"
                         >
-                            Tancar sessió
+                            {ca.common.logout}
                         </button>
                     </div>
                 </div>
             </nav>
 
-            <main className="max-w-[1400px] mx-auto px-6 py-12 relative z-10">
+            <main className="max-w-[1400px] mx-auto px-6 py-12 lg:py-20 relative z-10">
                 {/* Hero Section */}
-                <header className="mb-16">
+                <header className="mb-20 text-center md:text-left">
                     <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-bold uppercase tracking-[0.2em] mb-6"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-8"
                     >
-                        Descobreix experiències
+                        <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+                        {ca.client.discover}
                     </motion.div>
                     <motion.h1 
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.05 }}
-                        className="text-5xl md:text-7xl font-black text-white mb-6 tracking-tight leading-[0.95]"
+                        transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
+                        className="text-5xl md:text-8xl font-black text-white mb-8 tracking-tighter leading-[0.85] uppercase italic whitespace-nowrap"
                     >
-                        Pròxims{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-violet-400 to-cyan-400">
-                            Esdeveniments
+                        {ca.client.upcoming_events.split(' ')[0]}{' '}
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-400 to-cyan-400 animate-shimmer">
+                            {ca.client.upcoming_events.split(' ')[1]}
                         </span>
                     </motion.h1>
                     <motion.p 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="text-slate-400 max-w-2xl text-lg leading-relaxed"
+                        transition={{ delay: 0.2 }}
+                        className="text-slate-400 max-w-2xl text-xl leading-relaxed font-medium"
                     >
-                        Reserva les teves entrades per als concerts més exclusius i viu moments inoblidables amb els teus artistes preferits.
+                        {ca.client.hero_description}
                     </motion.p>
                 </header>
                 
                 {loading ? (
-                    /* Skeleton loaders — match new wide layout */
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {[1, 2, 3, 4].map(i => (
-                            <div key={i} className="h-[280px] bg-slate-900/40 animate-pulse rounded-3xl border border-white/[0.04]" />
+                            <div key={i} className="h-[320px] bg-slate-900/40 animate-pulse rounded-[2.5rem] border border-white/[0.04]" />
                         ))}
                     </div>
                 ) : events.length === 0 ? (
-                    <div className="py-24 text-center bg-slate-900/20 rounded-3xl border border-dashed border-white/[0.08]">
-                        <p className="text-slate-500 text-lg font-medium">No hi ha esdeveniments disponibles en aquest moment.</p>
-                        <p className="text-slate-600 text-sm mt-2">Torna aviat per descobrir nous concerts!</p>
-                    </div>
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="py-32 text-center bg-slate-900/20 rounded-[3rem] border border-dashed border-white/[0.08] backdrop-blur-sm"
+                    >
+                        <Music2 className="w-16 h-16 text-slate-700 mx-auto mb-6" />
+                        <p className="text-slate-400 text-2xl font-black uppercase tracking-tighter">{ca.client.no_events}</p>
+                        <p className="text-slate-600 text-sm mt-4 font-bold uppercase tracking-widest">{ca.client.no_events_subtitle}</p>
+                    </motion.div>
                 ) : (
                     <motion.div 
                         variants={containerVariants}
                         initial="hidden"
                         animate="visible"
-                        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+                        className="grid grid-cols-1 lg:grid-cols-2 gap-8"
                     >
                         {events.map(event => (
                             <motion.div 
@@ -134,58 +168,61 @@ export const EventDashboard = () => {
                                 variants={itemVariants}
                             >
                                 <SpotlightCard
-                                    className="rounded-3xl bg-slate-900/40 border border-white/[0.06] hover:border-indigo-500/30 transition-all duration-500 cursor-pointer group"
-                                    spotlightColor="rgba(99, 102, 241, 0.12)"
+                                    className="rounded-[2.5rem] bg-slate-900/40 border border-white/[0.06] hover:border-indigo-500/40 transition-all duration-500 cursor-pointer group overflow-hidden"
+                                    spotlightColor="rgba(99, 102, 241, 0.15)"
                                 >
                                     <div 
                                         onClick={() => navigate(`/event/${event.id}`)}
-                                        className="flex flex-col md:flex-row h-full"
+                                        className="flex flex-col md:flex-row h-full min-h-[320px]"
                                     >
                                         {/* Image Section */}
-                                        <div className="relative w-full md:w-[280px] lg:w-[320px] flex-shrink-0 overflow-hidden rounded-t-3xl md:rounded-l-3xl md:rounded-tr-none">
+                                        <div className="relative w-full md:w-[300px] flex-shrink-0 overflow-hidden">
                                             {event.image ? (
                                                 <img 
                                                     src={event.image} 
                                                     alt={event.title} 
-                                                    className="w-full h-[220px] md:h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
+                                                    className="w-full h-[240px] md:h-full object-cover group-hover:scale-110 transition-transform duration-1000 ease-out" 
                                                 />
                                             ) : (
-                                                <div className="w-full h-[220px] md:h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                                                    <span className="text-slate-700 text-sm">Sense imatge</span>
+                                                <div className="w-full h-[240px] md:h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                                                    <Music2 className="text-slate-700 w-12 h-12" />
                                                 </div>
                                             )}
                                             {/* Image gradient overlay */}
-                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-slate-900/80 hidden md:block" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent md:hidden" />
+                                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-slate-950/90 hidden md:block" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent md:hidden" />
                                             
                                             {/* Badge */}
-                                            <div className="absolute top-4 left-4">
-                                                <span className="px-3 py-1.5 rounded-xl bg-black/40 backdrop-blur-xl border border-white/10 text-[10px] font-bold text-white uppercase tracking-[0.15em] flex items-center gap-1.5">
-                                                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                                                    Concert
+                                            <div className="absolute top-6 left-6">
+                                                <span className="px-4 py-2 rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 text-[10px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                                                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
+                                                    {ca.client.concert}
                                                 </span>
                                             </div>
                                         </div>
 
                                         {/* Content Section */}
-                                        <div className="flex-1 p-6 md:p-8 flex flex-col justify-between min-h-[200px]">
+                                        <div className="flex-1 p-8 md:p-10 flex flex-col justify-between relative">
                                             <div>
-                                                <h2 className="text-2xl md:text-3xl font-black text-white leading-tight mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-indigo-300 transition-all duration-300">
+                                                <h2 className="text-3xl md:text-4xl font-black text-white leading-[0.9] mb-4 group-hover:text-indigo-400 transition-colors uppercase tracking-tighter italic">
                                                     {event.title}
                                                 </h2>
-                                                <p className="text-indigo-400 font-semibold text-lg mb-3">{event.artist}</p>
+                                                <div className="flex items-center gap-2 text-indigo-400 font-black text-sm uppercase tracking-widest mb-6">
+                                                    <Music2 size={16} />
+                                                    {event.artist}
+                                                </div>
                                                 {event.description && (
-                                                    <p className="text-slate-500 text-sm leading-relaxed line-clamp-2">
+                                                    <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 font-medium">
                                                         {event.description}
                                                     </p>
                                                 )}
                                             </div>
 
                                             {/* CTA Button */}
-                                            <div className="mt-6">
-                                                <button className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-bold rounded-2xl group-hover:from-indigo-500 group-hover:to-cyan-500 transition-all duration-500 shadow-lg shadow-indigo-600/20 group-hover:shadow-indigo-500/40 active:scale-[0.97]">
-                                                    RESERVAR ARA
-                                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                                            <div className="mt-8">
+                                                <button className="w-full md:w-auto inline-flex items-center justify-center gap-3 px-10 py-4 bg-indigo-600 text-white font-black text-xs tracking-[0.2em] rounded-2xl group-hover:bg-indigo-500 transition-all duration-300 shadow-xl shadow-indigo-600/20 group-hover:shadow-indigo-500/40 active:scale-[0.97]">
+                                                    {ca.client.reserve_now}
+                                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                                 </button>
                                             </div>
                                         </div>
@@ -198,6 +235,6 @@ export const EventDashboard = () => {
             </main>
 
             <Footer />
-        </div>
+        </motion.div>
     );
 };

@@ -54,11 +54,23 @@ async function startServer() {
         io.on('connection', (socket) => {
             console.log('Client connected:', socket.id);
 
+            // Unir-se al dashboard global (per rebre nous events)
+            socket.on('join-dashboard', () => {
+                socket.join('dashboard');
+                console.log(`Client ${socket.id} joined dashboard`);
+            });
+
             // Unir-se a una sala de sessió
             socket.on('join-session', ({ sessionId }) => {
                 const room = `session_${sessionId}`;
                 socket.join(room);
                 console.log(`Client ${socket.id} joined ${room}`);
+            });
+
+            // Notificació de canvis en el catàleg (Admin -> Server -> Broadcast)
+            socket.on('catalog-updated', (data) => {
+                console.log('Catalog updated, broadcasting to dashboard');
+                io.to('dashboard').emit('catalog-changed', data);
             });
 
             // Sortir de la sala

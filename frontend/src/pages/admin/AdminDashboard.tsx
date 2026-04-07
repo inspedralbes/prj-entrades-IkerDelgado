@@ -10,7 +10,9 @@ import {
   Menu, LayoutDashboard
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocketContext } from '../../context/SocketContext';
 import { ContentCard, RoleBadge } from '../../components/ui/DashboardUI';
+import { ca } from '../../locales/ca';
 
 const MenuVertical = ({
   menuItems,
@@ -24,13 +26,13 @@ const MenuVertical = ({
   skew?: number;
 }) => {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       {menuItems.map((item) => {
         const isActive = activeTab === item.id;
         return (
           <motion.div
             key={item.id}
-            className={`group/nav flex items-center gap-3 cursor-pointer transition-colors ${
+            className={`group/nav flex items-center gap-4 cursor-pointer transition-all ${
               isActive ? 'text-white' : 'text-slate-500 hover:text-slate-300'
             }`}
             initial="initial"
@@ -46,18 +48,18 @@ const MenuVertical = ({
               animate={isActive ? "active" : "initial"}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              <ArrowRight strokeWidth={3} size={24} style={{ color: isActive ? color : 'inherit' }} />
+              <ArrowRight strokeWidth={3} size={20} style={{ color: isActive ? color : 'inherit' }} />
             </motion.div>
 
             <motion.span
               variants={{
-                initial: { x: -20 },
+                initial: { x: -10 },
                 hover: { x: 0, skewX: skew },
                 active: { x: 0 }
               }}
               animate={isActive ? "active" : "initial"}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="font-black text-3xl tracking-tighter uppercase"
+              className="font-black text-2xl tracking-tighter uppercase italic"
               style={{ color: isActive ? color : 'inherit' }}
             >
               {item.label}
@@ -77,7 +79,8 @@ export const AdminDashboard = () => {
   const [eventsForSessions, setEventsForSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const { notifyCatalogUpdate } = useSocketContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Estats per als Modals
@@ -101,7 +104,7 @@ export const AdminDashboard = () => {
       console.error('Error fetching data:', err);
       setData([]);
     } finally {
-      setTimeout(() => setLoading(false), 300);
+      setTimeout(() => setLoading(false), 400);
     }
   };
 
@@ -111,14 +114,17 @@ export const AdminDashboard = () => {
   }, [tab]);
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Estàs segur que vols eliminar aquest registre?')) return;
+    if (!window.confirm(ca.admin.confirm_delete)) return;
     
     try {
       const endpoint = tab === 'users' ? `/users/${id}` : (tab === 'events' ? `/events/${id}` : `/sessions/${id}`);
       await api.delete(endpoint);
       setData(data.filter(item => item.id !== id));
+      if (tab !== 'users') {
+        notifyCatalogUpdate(tab === 'events' ? 'event' : 'session', 'deleted');
+      }
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al eliminar');
+      alert(err.response?.data?.message || ca.common.error);
     }
   };
 
@@ -149,13 +155,15 @@ export const AdminDashboard = () => {
       const endpoint = tab === 'events' ? '/events' : '/sessions';
       if (editingItem) {
         await api.put(`${endpoint}/${editingItem.id}`, formData);
+        notifyCatalogUpdate(tab === 'events' ? 'event' : 'session', 'updated');
       } else {
         await api.post(endpoint, formData);
+        notifyCatalogUpdate(tab === 'events' ? 'event' : 'session', 'created');
       }
       await fetchData();
       closeModal();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error al guardar');
+      alert(err.response?.data?.message || ca.common.error);
     } finally {
       setIsSaving(false);
     }
@@ -173,26 +181,27 @@ export const AdminDashboard = () => {
   });
 
   const menuItems = [
-    { id: 'users', label: 'Usuaris', onClick: () => setTab('users') },
-    { id: 'events', label: 'Esdeveniments', onClick: () => setTab('events') },
-    { id: 'sessions', label: 'Sessions', onClick: () => setTab('sessions') },
+    { id: 'users', label: ca.admin.users, onClick: () => setTab('users') },
+    { id: 'events', label: ca.admin.events, onClick: () => setTab('events') },
+    { id: 'sessions', label: ca.admin.sessions, onClick: () => setTab('sessions') },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 flex overflow-hidden">
-      {/* BACKGROUND DECORATION */}
-      <div className="fixed inset-0 z-0 opacity-10 [background-image:radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:32px_32px] pointer-events-none" />
-
+    <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="min-h-screen text-slate-200 flex overflow-hidden"
+    >
       {/* SIDEBAR (Desktop) */}
-      <aside className="hidden lg:flex flex-col w-80 bg-slate-950 border-r border-white/5 h-screen sticky top-0 z-20 p-10 shrink-0">
+      <aside className="hidden lg:flex flex-col w-80 bg-slate-950/40 backdrop-blur-3xl border-r border-white/5 h-screen sticky top-0 z-20 p-10 shrink-0">
         <div className="mb-16">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
-              <LayoutDashboard className="text-white" size={20} />
-            </div>
-            <h1 className="text-2xl font-black text-white tracking-tighter">ADMIN PANEL</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-black tracking-tighter text-white cursor-default group">
+                TICKET<span className="text-indigo-500">HUB</span>
+            </h1>
           </div>
-          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] pl-1">Ticketing System v1.0</p>
+          <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] pl-1">{ca.admin.system_version}</p>
         </div>
 
         <nav className="flex-1">
@@ -202,36 +211,27 @@ export const AdminDashboard = () => {
         <div className="mt-auto">
           <button 
             onClick={logout}
-            className="group flex items-center gap-4 text-slate-500 hover:text-red-400 transition-all font-bold uppercase text-[10px] tracking-[0.2em]"
+            className="group flex items-center gap-4 text-slate-500 hover:text-red-400 transition-all font-black uppercase text-[10px] tracking-[0.2em]"
           >
-            <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl group-hover:bg-red-500/10 group-hover:border-red-500/20 transition-all">
+            <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl group-hover:bg-red-500/20 group-hover:border-red-500/30 transition-all group-hover:rotate-12">
               <LogOut size={18} />
             </div>
-            <span>Tancar Sessió</span>
+            <span>{ca.common.logout}</span>
           </button>
         </div>
       </aside>
 
       {/* MOBILE HEADER */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 z-30 px-6 py-4 flex justify-between items-center">
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-slate-950/60 backdrop-blur-2xl border-b border-white/5 z-30 px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <LayoutDashboard className="text-white" size={16} />
-          </div>
-          <h1 className="text-lg font-black text-white tracking-tighter uppercase">Admin</h1>
+          <h1 className="text-xl font-black text-white tracking-tighter italic">TICKET<span className="text-indigo-500">HUB</span></h1>
         </div>
         <div className="flex gap-2">
            <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 bg-slate-900 border border-white/5 text-slate-400 rounded-lg"
+              className="p-3 bg-slate-900 border border-white/5 text-slate-400 rounded-xl"
             >
               <Menu size={20} />
-            </button>
-           <button 
-              onClick={logout}
-              className="p-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg"
-            >
-              <LogOut size={20} />
             </button>
         </div>
       </div>
@@ -249,66 +249,73 @@ export const AdminDashboard = () => {
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`text-left text-4xl font-black uppercase tracking-tighter ${
-                  tab === item.id ? 'text-indigo-500' : 'text-slate-700'
+                className={`text-left text-5xl font-black uppercase italic tracking-tighter ${
+                  tab === item.id ? 'text-indigo-500' : 'text-slate-800'
                 }`}
               >
                 {item.label}
               </button>
             ))}
+            <button 
+                onClick={logout}
+                className="mt-auto flex items-center gap-4 text-red-500 font-black uppercase text-xs tracking-widest p-6 bg-red-500/10 rounded-3xl"
+            >
+                <LogOut size={20} /> {ca.common.logout}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 overflow-y-auto h-screen relative z-10 pt-20 lg:pt-0">
+      <main className="flex-1 overflow-y-auto h-screen relative z-10 pt-24 lg:pt-0">
         <div className="p-6 md:p-10 lg:p-16 max-w-[1600px] mx-auto w-full">
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-            <div>
-              <h2 className="text-5xl lg:text-7xl font-black text-white tracking-tighter uppercase">
+          
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-16">
+            <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+            >
+              <h2 className="text-6xl lg:text-8xl font-black text-white tracking-tighter uppercase italic">
                 {tab}
               </h2>
-              <div className="flex items-center gap-3 mt-4">
-                <div className="w-12 h-1 bg-indigo-500 rounded-full" />
-                <p className="text-slate-500 text-[10px] uppercase tracking-[0.4em] font-black">Control Panel / {tab}</p>
+              <div className="flex items-center gap-4 mt-6">
+                <div className="w-16 h-1 bg-indigo-500 rounded-full animate-shimmer" />
+                <p className="text-slate-500 text-[10px] uppercase tracking-[0.5em] font-black">Control Panel / {tab}</p>
               </div>
-            </div>
+            </motion.div>
             
-            <div className="hidden md:flex items-center gap-4 bg-slate-900/50 p-2 border border-white/5 rounded-2xl backdrop-blur-sm">
-              <div className="px-4 py-2">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Registres Totals</p>
-                <p className="text-xl font-black text-white">{filteredData.length}</p>
+            <motion.div 
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                className="hidden md:flex items-center gap-6 bg-slate-900/40 p-3 border border-white/5 rounded-[2rem] backdrop-blur-sm"
+            >
+              <div className="px-6 py-2">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">{ca.admin.total_records}</p>
+                <p className="text-3xl font-black text-white italic tracking-tighter">{filteredData.length}</p>
               </div>
-              <div className="w-px h-8 bg-white/5" />
-              <div className="px-4 py-2">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Estat</p>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                  <p className="text-sm font-bold text-emerald-500 uppercase">En línia</p>
-                </div>
-              </div>
-            </div>
+            </motion.div>
           </header>
 
-        <ContentCard>
-          <div className="p-6 flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-900/50 border-b border-white/5">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+        <ContentCard className="rounded-[3rem] overflow-hidden border border-white/[0.04] bg-slate-900/20 backdrop-blur-md">
+          <div className="p-8 flex flex-col md:flex-row justify-between items-center gap-8 bg-slate-900/40 border-b border-white/5">
+            <div className="relative w-full md:w-[400px]">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
               <input 
                 type="text" 
-                placeholder={`Cerca en ${tab}...`} 
+                placeholder={ca.common.search} 
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-950 border border-white/5 pl-12 pr-4 py-3.5 rounded-xl focus:outline-none focus:border-indigo-500/50 text-sm transition-all text-slate-300 placeholder:text-slate-700"
+                className="w-full bg-slate-950/50 border border-white/5 pl-14 pr-6 py-4 rounded-2xl focus:outline-none focus:border-indigo-500/50 text-sm transition-all text-slate-300 placeholder:text-slate-700 font-medium"
               />
             </div>
             
             {tab !== 'users' && (
               <button 
                 onClick={() => openModal()}
-                className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-3.5 bg-indigo-600 text-white rounded-xl font-black text-xs tracking-widest hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 active:scale-95"
+                className="w-full md:w-auto flex items-center justify-center gap-4 px-10 py-4 bg-indigo-600 text-white rounded-[1.2rem] font-black text-xs tracking-[0.2em] hover:bg-indigo-500 transition-all shadow-2xl shadow-indigo-600/20 active:scale-95 group"
               >
-                <Plus size={18} /> NOU {tab.toUpperCase().slice(0, -1)}
+                <Plus size={20} className="group-hover:rotate-90 transition-transform" /> 
+                {tab === 'events' ? ca.admin.new_event : ca.admin.new_session}
               </button>
             )}
           </div>
@@ -316,101 +323,109 @@ export const AdminDashboard = () => {
           <div className="overflow-x-auto min-h-[500px]">
             <AnimatePresence mode="wait">
               {loading ? (
-                <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-32">
-                  <Loader2 className="animate-spin text-indigo-500 w-12 h-12 mb-4" />
-                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.3em]">Sincronitzant dades...</p>
+                <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-40">
+                  <Loader2 className="animate-spin text-indigo-500 w-16 h-16 mb-6 opacity-50" />
+                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">{ca.admin.syncing}</p>
                 </motion.div>
               ) : (
                 <motion.table key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full text-left border-collapse">
-                  <thead className="bg-slate-950/50 text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-white/5">
+                  <thead className="bg-slate-950/30 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] border-b border-white/5">
                     <tr>
-                      <th className="py-6 px-8">{tab === 'sessions' ? 'Lloc' : 'Nom / Títol'}</th>
-                      <th className="py-6 px-8">Dades Secundàries</th>
-                      <th className="py-6 px-8 text-center">Estat / Detall</th>
-                      <th className="py-6 px-8 text-right">Accions</th>
+                      <th className="py-8 px-10">{tab === 'sessions' ? ca.admin.venue : 'Nom / Títol'}</th>
+                      <th className="py-8 px-10">Dades Secundàries</th>
+                      <th className="py-8 px-10 text-center">Estat / Detall</th>
+                      <th className="py-8 px-10 text-right">{ca.common.actions}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-sm">
-                    {filteredData.map((item: any) => (
-                      <tr key={item.id} className="hover:bg-indigo-500/[0.02] transition-colors group">
-                        <td className="py-6 px-8 font-bold text-slate-200">
+                    {filteredData.map((item: any, idx: number) => (
+                      <motion.tr 
+                        key={item.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className="hover:bg-white/[0.02] transition-colors group"
+                      >
+                        <td className="py-8 px-10 font-bold text-slate-100">
                           {tab === 'sessions' ? (
-                            <div className="flex flex-col gap-1">
-                              <span className="text-base">{item.venue}</span>
-                              <div className="flex items-center gap-2">
-                                <div className="w-1 h-1 bg-indigo-500 rounded-full" />
+                            <div className="flex flex-col gap-2">
+                              <span className="text-lg italic tracking-tight">{item.venue}</span>
+                              <div className="flex items-center gap-3">
+                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
                                 <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{item.event_title || item.event?.title}</span>
                               </div>
                             </div>
                           ) : (
-                            <span className="text-base">{item.name || item.title}</span>
+                            <span className="text-lg italic tracking-tight">{item.name || item.title}</span>
                           )}
                         </td>
-                        <td className="py-6 px-8 text-slate-400 font-medium">
+                        <td className="py-8 px-10 text-slate-400 font-medium">
                           {tab === 'users' ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
                               <div className="w-2 h-2 rounded-full bg-slate-800" />
-                              {item.email}
+                              <span className="font-mono text-xs">{item.email}</span>
                             </div>
                           ) : 
                            tab === 'events' ? (
-                            <div className="flex items-center gap-2 text-indigo-400/80">
-                              <Music size={14} />
-                              {item.artist}
+                            <div className="flex items-center gap-3 text-indigo-400/80">
+                              <Music size={16} />
+                              <span className="font-black uppercase tracking-widest text-[10px]">{item.artist}</span>
                             </div>
                            ) : (
-                            <div className="flex items-center gap-2">
-                              <Calendar size={14} />
-                              {new Date(item.date_time).toLocaleString('ca-ES', { 
-                                day: '2-digit', 
-                                month: '2-digit', 
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
+                            <div className="flex items-center gap-3 text-slate-500">
+                              <Calendar size={16} className="text-indigo-500/50" />
+                              <span className="font-bold">
+                                {new Date(item.date_time).toLocaleString('ca-ES', { 
+                                    day: '2-digit', 
+                                    month: '2-digit', 
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
+                              </span>
                             </div>
                           )}
                         </td>
-                        <td className="py-6 px-8 text-center">
+                        <td className="py-8 px-10 text-center">
                           {tab === 'users' ? (
                             <RoleBadge role={item.role} />
                           ) : tab === 'events' ? (
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-950 border border-white/5 rounded-full">
-                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.sessions_count || 0} SESSIONS</span>
+                            <div className="inline-flex items-center gap-3 px-5 py-2 bg-slate-950/50 border border-white/5 rounded-full">
+                              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{item.sessions_count || 0} SESSIONS</span>
                             </div>
                           ) : (
-                            <span className="text-[10px] font-black text-indigo-400/60 uppercase tracking-widest">REF: #{item.id}</span>
+                            <span className="text-[10px] font-black text-indigo-400/40 uppercase tracking-[0.3em] font-mono">REF: #{item.id}</span>
                           )}
                         </td>
-                        <td className="py-6 px-8 text-right">
+                        <td className="py-8 px-10 text-right">
                           <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
                             {tab !== 'users' && (
                               <button 
                                 onClick={() => openModal(item)}
-                                className="p-2.5 text-slate-400 hover:text-white hover:bg-indigo-600 rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20"
+                                className="p-3 text-slate-500 hover:text-white hover:bg-indigo-600 rounded-xl transition-all shadow-xl hover:shadow-indigo-600/30"
                               >
                                 <Edit3 size={18} />
                               </button>
                             )}
                             <button 
                               onClick={() => handleDelete(item.id)}
-                              className="p-2.5 text-slate-400 hover:text-white hover:bg-red-600 rounded-xl transition-all shadow-lg hover:shadow-red-600/20"
+                              className="p-3 text-slate-500 hover:text-white hover:bg-red-600 rounded-xl transition-all shadow-xl hover:shadow-red-600/30"
                             >
                               <Trash2 size={18} />
                             </button>
                           </div>
                         </td>
-                      </tr>
+                      </motion.tr>
                     ))}
                     {filteredData.length === 0 && (
-                      <tr><td colSpan={4} className="py-40 text-center">
-                        <div className="flex flex-col items-center gap-4">
-                          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center border border-white/5">
-                            <Search className="text-slate-700" size={32} />
+                      <tr><td colSpan={4} className="py-48 text-center">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-6">
+                          <div className="w-24 h-24 bg-slate-900/50 rounded-[2rem] flex items-center justify-center border border-white/5">
+                            <Search className="text-slate-800" size={40} />
                           </div>
-                          <p className="text-slate-600 text-sm font-bold uppercase tracking-widest italic">No s'ha trobat cap registre en {tab}</p>
-                        </div>
+                          <p className="text-slate-600 text-lg font-black uppercase tracking-tighter italic">{ca.common.no_results}</p>
+                        </motion.div>
                       </td></tr>
                     )}
                   </tbody>
@@ -425,126 +440,126 @@ export const AdminDashboard = () => {
       {/* MODAL (Create/Edit) */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 md:p-10">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeModal}
-              className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" 
+              className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl" 
             />
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 30 }}
+              initial={{ scale: 0.9, opacity: 0, y: 40 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 30 }}
-              className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              exit={{ scale: 0.9, opacity: 0, y: 40 }}
+              className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[3rem] shadow-[0_0_100px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="p-8 border-b border-white/5 flex justify-between items-center bg-slate-900/50">
+              <div className="p-10 border-b border-white/5 flex justify-between items-center bg-slate-900/40">
                 <div>
-                  <h2 className="text-3xl font-black text-white uppercase tracking-tighter">
-                    {editingItem ? 'Editar' : 'Crear'} {tab.slice(0, -1)}
+                  <h2 className="text-4xl font-black text-white uppercase italic tracking-tighter">
+                    {editingItem ? ca.common.edit : ca.common.create} {tab.slice(0, -1)}
                   </h2>
-                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.2em] mt-1">Introducció de dades al sistema</p>
+                  <p className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.3em] mt-2">Dades del sistema d'entrades</p>
                 </div>
-                <button onClick={closeModal} className="p-2 bg-slate-950 border border-white/5 text-slate-500 hover:text-white rounded-xl transition-all hover:rotate-90">
+                <button onClick={closeModal} className="p-3 bg-slate-950 border border-white/5 text-slate-500 hover:text-white rounded-2xl transition-all hover:rotate-90">
                   <X size={24} />
                 </button>
               </div>
 
-              <form onSubmit={handleSave} className="p-8 space-y-6 overflow-y-auto">
+              <form onSubmit={handleSave} className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
                 {tab === 'events' ? (
                   <>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                        <Music size={14} className="text-indigo-500" /> Títol de l'event
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <Music size={14} className="text-indigo-500" /> {ca.admin.event_title}
                       </label>
                       <input 
                         required
                         type="text" 
                         value={formData.title || ''}
                         onChange={(e) => setFormData({...formData, title: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-5 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800 font-medium"
                         placeholder="Ex: Primavera Sound 2026"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                        <Users size={14} className="text-indigo-500" /> Artista / Grup
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <Users size={14} className="text-indigo-500" /> {ca.admin.artist}
                       </label>
                       <input 
                         required
                         type="text" 
                         value={formData.artist || ''}
                         onChange={(e) => setFormData({...formData, artist: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-5 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800 font-medium"
                         placeholder="Ex: Arctic Monkeys"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                        <ImageIcon size={14} className="text-indigo-500" /> URL de la imatge
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <ImageIcon size={14} className="text-indigo-500" /> {ca.admin.image_url}
                       </label>
                       <input 
                         type="text" 
                         value={formData.image || ''}
                         onChange={(e) => setFormData({...formData, image: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-5 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800 font-medium font-mono text-xs"
                         placeholder="https://images.unsplash.com/..."
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                        <AlertCircle size={14} className="text-indigo-500" /> Descripció detallada
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                        <AlertCircle size={14} className="text-indigo-500" /> {ca.admin.description}
                       </label>
                       <textarea 
                         value={formData.description || ''}
                         onChange={(e) => setFormData({...formData, description: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all h-32 resize-none placeholder:text-slate-800"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-5 text-sm focus:border-indigo-500/50 outline-none transition-all h-32 resize-none placeholder:text-slate-800 font-medium"
                         placeholder="Explica de què tracta l'esdeveniment..."
                       />
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
                         <LayoutDashboard size={14} className="text-indigo-500" /> Selecciona l'esdeveniment
                       </label>
                       <select 
                         required
                         value={formData.event_id || ''}
                         onChange={(e) => setFormData({...formData, event_id: e.target.value})}
-                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all appearance-none text-slate-300"
+                        className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-5 text-sm focus:border-indigo-500/50 outline-none transition-all appearance-none text-slate-300 font-bold uppercase tracking-widest"
                       >
-                        <option value="">-- Selecciona un event --</option>
+                        <option value="">-- {ca.admin.events} --</option>
                         {eventsForSessions.map(ev => (
                           <option key={ev.id} value={ev.id}>{ev.title} ({ev.artist})</option>
                         ))}
                       </select>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                          <Calendar size={14} className="text-indigo-500" /> Data i Hora
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                          <Calendar size={14} className="text-indigo-500" /> {ca.admin.date_time}
                         </label>
                         <input 
                           required
                           type="datetime-local" 
                           value={formData.date_time ? formData.date_time.slice(0, 16) : ''}
                           onChange={(e) => setFormData({...formData, date_time: e.target.value})}
-                          className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all text-slate-300"
+                          className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-5 text-sm focus:border-indigo-500/50 outline-none transition-all text-slate-300 font-bold"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
-                          <MapPin size={14} className="text-indigo-500" /> Lloc (Venue)
+                      <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] flex items-center gap-3">
+                          <MapPin size={14} className="text-indigo-500" /> {ca.admin.venue}
                         </label>
                         <input 
                           required
                           type="text" 
                           value={formData.venue || ''}
                           onChange={(e) => setFormData({...formData, venue: e.target.value})}
-                          className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-4 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800"
+                          className="w-full bg-slate-950 border border-white/5 rounded-2xl px-6 py-5 text-sm focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-800 font-medium"
                           placeholder="Ex: Palau Sant Jordi"
                         />
                       </div>
@@ -552,21 +567,21 @@ export const AdminDashboard = () => {
                   </>
                 )}
 
-                <div className="pt-6 flex gap-4">
+                <div className="pt-10 flex gap-6">
                   <button 
                     type="button"
                     onClick={closeModal}
-                    className="flex-1 px-8 py-4 border border-white/5 text-slate-500 font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-white/5 transition-all active:scale-95"
+                    className="flex-1 px-8 py-5 border border-white/5 text-slate-500 font-black text-xs uppercase tracking-[0.3em] rounded-2xl hover:bg-white/5 transition-all active:scale-95"
                   >
-                    Cancel·lar
+                    {ca.common.cancel}
                   </button>
                   <button 
                     type="submit"
                     disabled={isSaving}
-                    className="flex-1 px-8 py-4 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
+                    className="flex-1 px-8 py-5 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.3em] rounded-2xl hover:bg-indigo-500 transition-all shadow-2xl shadow-indigo-600/30 flex items-center justify-center gap-4 active:scale-95 disabled:opacity-50"
                   >
-                    {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                    {editingItem ? 'Actualitzar' : 'Confirmar'}
+                    {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                    {editingItem ? ca.admin.update : ca.common.confirm}
                   </button>
                 </div>
               </form>
@@ -574,6 +589,6 @@ export const AdminDashboard = () => {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };

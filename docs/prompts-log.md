@@ -155,56 +155,62 @@ Características implementadas:
 
 ---
 
-### Prompt #4 — [Següent pas o correcció]
+### Prompt #4 — [Fase 3: Lògica de Bloqueig en Laravel API]
 
-**Data:** 2026-04-02 HH:MM  
+**Data:** 2026-04-02 16:15  
 **Eina:** Gemini CLI  
 **Prompt:**
 
-```
-[COPIA EL PROMPT]
+```text
+Continuem amb el pla seguint l'especificació. Implementa la Fase 3: Lògica de Bloqueig (Laravel API).
+Vull que modifiquis els següents fitxers:
+1. `routes/api.php` afegint rutes per `/seats/lock` i `/seats/unlock` sota middleware auth.
+2. `SeatController.php` per implementar els mètodes de `lock` i `unlock` usant `lockForUpdate()`. Cada vegada que es tanqui una acció de lock/unlock, cal publicar al canal de Redis 'seat-updates'.
+3. Sigues coherent, fes seients actualitzats amb `status:'locked'` i `locked_at: now()`.
+4. També crea una comanda de consola `UnlockExpiredSeats` que netegi manualment els seats de més de 5 min.
 ```
 
 **Resposta resumida:**  
-[Què va fer]
+Gemini ha modificat `SeatController.php` afegint els mètodes `lock` i `unlock`, utilitzant correctament les transaccions de BBDD de Laravel amb `lockForUpdate` per evitar conditions i Race condition events. Totes subscriuen un publish a Redis cap al servidor Socket formatat amb JSON de forma impol·luta. Així mateix ha desenvolupat `UnlockExpiredSeats` a la carpeta de Console de Laravel i n'ha modificat les regles a `api.php`.
 
-**Relació problema → canvi en el prompt:**  
-[Si vas canviar el prompt per corregir un error anterior, explica per què]
-
-**Resultat:** ✅/❌
+**Resultat:** ✅ Va funcionar perfectament d'arrel i els controladors responien per requests del Swagger/Postman automàticament confirmant DB Update.
 
 ---
 
-<!--
-PLANTILLA PER A NOUS PROMPTS (copia i enganxa per cada iteració):
+### Prompt #5 — [Fase 4: Ús i context global Frontend React i Hook UseSocketContext]
 
-### Prompt #N — [Títol descriptiu]
-**Data:** YYYY-MM-DD HH:MM
-**Eina:** Gemini CLI / Antigravity
+**Data:** 2026-04-02 16:45  
+**Eina:** Gemini CLI  
 **Prompt:**
-```
-[Prompt exacte]
+
+```text
+Ara ataquem la Fase 4 de l'especificació: Integració Frontend.
+1. Implementa a `SeatSelection.tsx` la subscripció al context existent i crida els events 'seat-locked', 'seat-unlocked', 'seat-purchased' i 'lock-expired'.
+2. Els seients tindran un de 3 estats: available (fons normal), locked (taronja on no deixa seleccionar), i sold (gris fosc).
+3. Adapta l'HTML de la classe 'Armchair' per reflectir els tooltip 'RESERVAT' depenent de certs paràmetres locals.
+4. Quan un usuari faci endavant en la compra vull que el frontend executi primer la query `/seats/lock` pre-pagament a la API per assegurar-se reserva.
 ```
 
-**Resposta resumida:**
-[Què va fer l'agent]
+**Resposta resumida:**  
+L'Agent ha inclòs els imports i hooks a `SeatSelection.tsx`, especialment invocant `useSocketContext`. Ha modelat en temps real canvis dels estats mitjançant socket.on dins de la useEffect i ha muntat estilització taronja directament damunt el JSX.
 
 **Errors detectats:**
-- [Error 1]
+- L'agent ha omès cridar correctament en algun socket.off.
 
-**Relació problema → canvi en el prompt:**
-[Explicació]
+**Relació problema → canvi en el prompt:**  
+Li he recordat que al netejar context React en sortir de la pàgina ha desubscriure el hook global total:
+"Afegeix return () => { socket.off('xyz'); } al hook del frontend per evitar events en bucle."
 
-**Resultat:** ✅/❌
--->
+**Resultat:** ✅ Funcional de dalt a baix. Els panells laterals i butaques han adoptat els colors al segon en 2 navegadors sincronitzats sense necessitat de fer refresh (F5).
 
 ---
 
 ## Resum d'Iteracions
 
-| #   | Tipus         | Eina        | Resultat | Observacions                   |
-| --- | ------------- | ----------- | -------- | ------------------------------ |
-| 1   | Especificació | Antigravity | ✅       | Validació de la feature        |
-| 2   | Planificació  | Gemini CLI  | ✅       | Pla d'implementació en 4 fases |
-| 3   | Implementació | Gemini CLI  | ⏳       | Pendent                        |
-| ... | ...           | ...         | ...      | ...                            |
+| # | Tipus | Eina | Resultat | Observacions |
+|---|---|---|---|---|
+| 1 | Especificació | Antigravity | ✅ | Validació general de la feature |
+| 2 | Planificació | Gemini CLI | ✅ | Pla d'implementació establert en 4 fases |
+| 3 | Implementació | Gemini CLI | ✅ | Fetes amb èxit les connexions NodeJS io.sockets de Backend Redis |
+| 4 | Implementació | Gemini CLI | ✅ | Controlador PHP Laravel amb events Redis i Lock completat |
+| 5 | Implementació | Gemini CLI | ✅ | Interfície modificada i estils correctament aplicats per les variants de reserva |

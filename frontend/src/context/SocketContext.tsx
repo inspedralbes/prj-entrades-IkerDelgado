@@ -7,6 +7,8 @@ interface SocketContextType {
     socket: Socket | null;
     joinSession: (sessionId: string) => void;
     leaveSession: (sessionId: string) => void;
+    joinDashboard: () => void;
+    notifyCatalogUpdate: (type: 'event' | 'session', action: 'created' | 'updated' | 'deleted') => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -50,8 +52,28 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const joinDashboard = () => {
+        if (socketRef.current) {
+            socketRef.current.emit('join-dashboard');
+            console.log('Joined global dashboard room');
+        }
+    };
+
+    const notifyCatalogUpdate = (type: 'event' | 'session', action: 'created' | 'updated' | 'deleted') => {
+        if (socketRef.current) {
+            socketRef.current.emit('catalog-updated', { type, action });
+            console.log(`Notified catalog update: ${type} ${action}`);
+        }
+    };
+
     return (
-        <SocketContext.Provider value={{ socket: socketRef.current, joinSession, leaveSession }}>
+        <SocketContext.Provider value={{ 
+            socket: socketRef.current, 
+            joinSession, 
+            leaveSession, 
+            joinDashboard, 
+            notifyCatalogUpdate 
+        }}>
             {children}
         </SocketContext.Provider>
     );

@@ -3,7 +3,7 @@ import { useState, useId, useEffect } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import * as LabelPrimitive from "@radix-ui/react-label";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { motion, AnimatePresence } from "framer-motion";
@@ -227,8 +227,6 @@ function SignInForm() {
         body: JSON.stringify({ email, password }),
       });
 
-      console.log("Resposta completa del servidor:", response);
-
       const userData = response.user;
       const token = response.access_token;
 
@@ -237,8 +235,6 @@ function SignInForm() {
       }
 
       login(userData, token);
-
-      // Redirecció
       navigate(userData.role === "admin" ? "/admin" : "/dashboard");
 
     } catch (err: any) {
@@ -340,22 +336,15 @@ function SignUpForm() {
         }),
       });
 
-      console.log("Resposta registre:", response);
-
-      // Extracció flexible: comprovem l'arrel i també l'objecte "data" si existís
       const userData = response.user || response.data?.user;
       const token = response.access_token || response.data?.access_token;
 
       if (!token || !userData) {
-        console.error("Dades mancants en la resposta:", response);
         throw new Error("S'ha creat la compte però falten dades del servidor.");
       }
 
       login(userData, token);
-
-      // Redirecció intel·ligent segons el rol
-      const destination = userData.role === "admin" ? "/admin" : "/dashboard";
-      navigate(destination);
+      navigate(userData.role === "admin" ? "/admin" : "/dashboard");
 
     } catch (err: any) {
       if (err.errors) {
@@ -466,7 +455,6 @@ function AuthFormContainer({
           {isSignIn ? "Registra't" : "Inicia sessió"}
         </Button>
       </div>
-      {/* Opcional: Registre amb Google */}
     </div>
   );
 }
@@ -494,7 +482,7 @@ const defaultSignInContent = {
   },
   quote: {
     text: "Benvingut de nou! El concert t'espera.",
-    author: "Concert Hub",
+    author: "TICKETHUB",
   },
 };
 
@@ -505,7 +493,7 @@ const defaultSignUpContent = {
   },
   quote: {
     text: "Crea un compte. Un nou capítol comença.",
-    author: "Concert Hub",
+    author: "TICKETHUB",
   },
 };
 
