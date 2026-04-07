@@ -11,7 +11,7 @@ class EventController extends Controller
 {
     public function index()
     {
-        $events = Event::withCount('sessions')->get();
+        $events = Event::with('sessions')->withCount('sessions')->get();
         return EventResource::collection($events);
     }
 

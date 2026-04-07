@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, Music2, Calendar, MapPin, Ticket, LogOut } from 'lucide-react';
+import { ArrowRight, Music2, Calendar, MapPin, Ticket, LogOut, Search } from 'lucide-react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { useSocketContext } from '../../context/SocketContext';
@@ -9,17 +9,34 @@ import { SpotlightCard } from '../../components/ui/SpotlightCard';
 import { Footer } from '../../components/ui/Footer';
 import { ca } from '../../locales/ca';
 
+interface Session {
+    id: number;
+    date_time: string;
+}
+
 interface Event {
     id: number;
     title: string;
     artist: string;
     image: string;
     description: string;
+    sessions?: Session[];
 }
 
 export const EventDashboard = () => {
     const [events, setEvents] = useState<Event[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const filteredEvents = events.filter(e => {
+        const query = searchQuery.toLowerCase();
+        const matchesText = e.title.toLowerCase().includes(query) || e.artist.toLowerCase().includes(query);
+        const matchesDate = e.sessions?.some(session => {
+            const dateStr = new Date(session.date_time).toLocaleDateString('ca-ES', { day: '2-digit', month: 'long', year: 'numeric' }).toLowerCase();
+            return dateStr.includes(query);
+        });
+        return matchesText || matchesDate;
+    });
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     const { socket, joinDashboard } = useSocketContext();
@@ -127,7 +144,7 @@ export const EventDashboard = () => {
                         className="text-4xl md:text-6xl font-black text-white mb-8 tracking-tighter leading-[0.85] uppercase italic pr-4"
                     >
                         {ca.client.upcoming_events.split(' ')[0]}{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-400 to-cyan-400 pr-2 md:pr-4">
+                        <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-violet-400 to-cyan-400 pr-6">
                             {ca.client.upcoming_events.split(' ')[1]}
                         </span>
                     </motion.h1>
@@ -135,10 +152,26 @@ export const EventDashboard = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-slate-400 max-w-2xl text-lg leading-relaxed font-medium"
+                        className="text-slate-400 max-w-2xl text-lg leading-relaxed font-medium mb-10 mx-auto md:mx-0"
                     >
                         {ca.client.hero_description}
                     </motion.p>
+                    
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="relative max-w-md mx-auto md:mx-0"
+                    >
+                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 pointer-events-none" />
+                        <input 
+                            type="text" 
+                            placeholder="Buscar per artista, títol o data (ex: abril)..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-slate-900/50 backdrop-blur-md border border-white/10 rounded-[2rem] py-4 pl-16 pr-6 text-white text-sm font-medium focus:outline-none focus:border-indigo-500/50 transition-all font-mono placeholder:text-slate-600 shadow-2xl"
+                        />
+                    </motion.div>
                 </header>
                 
                 {loading ? (
@@ -147,7 +180,7 @@ export const EventDashboard = () => {
                             <div key={i} className="h-[320px] bg-slate-900/40 animate-pulse rounded-[2.5rem] border border-white/[0.04]" />
                         ))}
                     </div>
-                ) : events.length === 0 ? (
+                ) : filteredEvents.length === 0 ? (
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -164,7 +197,7 @@ export const EventDashboard = () => {
                         animate="visible"
                         className="grid grid-cols-1 lg:grid-cols-2 gap-8"
                     >
-                        {events.map(event => (
+                        {filteredEvents.map(event => (
                             <motion.div 
                                 key={event.id}
                                 variants={itemVariants}
@@ -180,7 +213,7 @@ export const EventDashboard = () => {
                                         {/* Image Section */}
                                         <div className="relative w-full sm:w-[240px] md:w-[300px] flex-shrink-0 overflow-hidden">
                                             {event.image ? (
-                                                <img 
+                                                <motion.img 
                                                     src={event.image} 
                                                     alt={event.title} 
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" 
@@ -209,9 +242,17 @@ export const EventDashboard = () => {
                                                 <h2 className="text-3xl font-black text-white leading-[0.9] mb-4 group-hover:text-indigo-400 transition-colors uppercase tracking-tighter italic">
                                                     {event.title}
                                                 </h2>
-                                                <div className="flex items-center gap-2 text-indigo-400 font-black text-sm uppercase tracking-widest mb-6">
+                                                <div className="flex items-center gap-2 text-indigo-400 font-black text-sm uppercase tracking-widest mb-3">
                                                     <Music2 size={16} />
                                                     {event.artist}
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest mb-6">
+                                                    <Calendar size={14} className="text-slate-500" />
+                                                    {event.sessions && event.sessions.length > 0 
+                                                        ? Array.from(new Set(event.sessions.map(s => 
+                                                            new Date(s.date_time).toLocaleDateString('ca-ES', { day: '2-digit', month: 'short' })
+                                                          ))).join(', ')
+                                                        : 'Pròximament'}
                                                 </div>
                                                 {event.description && (
                                                     <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 font-medium">

@@ -8,8 +8,19 @@ import {
   Search, Trash2, Edit3, X, Save, AlertCircle,
   MapPin, Music, Image as ImageIcon, ArrowRight,
   Menu, LayoutDashboard, DollarSign, Ticket as TicketIcon,
-  TrendingUp, PieChart, BarChart3
+  TrendingUp, PieChart, BarChart3, Download, ChevronUp, ChevronDown, ChevronLeft, ChevronRight
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+
+const mockChartData = [
+  { name: 'Dl', revenue: 400, tickets: 24 },
+  { name: 'Dt', revenue: 300, tickets: 13 },
+  { name: 'Dc', revenue: 550, tickets: 38 },
+  { name: 'Dj', revenue: 200, tickets: 10 },
+  { name: 'Dv', revenue: 900, tickets: 65 },
+  { name: 'Ds', revenue: 1200, tickets: 90 },
+  { name: 'Dg', revenue: 800, tickets: 50 },
+];
 import { useAuth } from '../../context/AuthContext';
 import { useSocketContext } from '../../context/SocketContext';
 import { ContentCard, RoleBadge } from '../../components/ui/DashboardUI';
@@ -81,9 +92,37 @@ export const AdminDashboard = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+  const itemsPerPage = 8;
   const { logout, user } = useAuth();
   const { socket, joinDashboard, notifyCatalogUpdate } = useSocketContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setSortConfig(null);
+  }, [tab, search]);
+  
+  const handleSort = (key: string) => {
+    setSortConfig(current => {
+      if (current?.key === key && current?.direction === 'asc') return { key, direction: 'desc' };
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const exportToCSV = () => {
+    if (filteredData.length === 0) return;
+    const headers = Object.keys(filteredData[0]).join(',');
+    const rows = filteredData.map(item => Object.values(item).map(val => `"${val}"`).join(',')).join('\n');
+    const blob = new Blob([`${headers}\n${rows}`], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ticket_hub_${tab}_export.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
 
   // Estats per als Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -205,6 +244,26 @@ export const AdminDashboard = () => {
     );
   });
 
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    const valA = a[key] || '';
+    const valB = b[key] || '';
+    if (valA < valB) return direction === 'asc' ? -1 : 1;
+    if (valA > valB) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const paginatedData = sortedData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
+
+  const SortIcon = ({ columnKey }: { columnKey: string }) => {
+    if (sortConfig?.key !== columnKey) return <ChevronUp className="w-3 h-3 opacity-20 inline-block ml-2" />;
+    return sortConfig.direction === 'asc' 
+      ? <ChevronUp className="w-3 h-3 text-indigo-400 inline-block ml-2" /> 
+      : <ChevronDown className="w-3 h-3 text-indigo-400 inline-block ml-2" />;
+  };
+
   const menuItems = [
     { id: 'reports', label: 'Informes', onClick: () => setTab('reports') },
     { id: 'users', label: ca.admin.users, onClick: () => setTab('users') },
@@ -322,8 +381,9 @@ export const AdminDashboard = () => {
           </header>
 
         {tab === 'reports' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md">
+          <div className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900/40 border border-white/5 p-8 rounded-[2.5rem] backdrop-blur-md">
               <div className="flex items-center gap-5 mb-8">
                 <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center shadow-xl"><DollarSign size={28} /></div>
                 <div>
@@ -397,6 +457,25 @@ export const AdminDashboard = () => {
               </div>
             </motion.div>
           </div>
+          
+          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md h-[400px]">
+            <h3 className="text-xl font-black uppercase italic tracking-tighter text-white mb-8">Evolució d'Ingressos</h3>
+            <ResponsiveContainer width="100%" height="80%">
+              <AreaChart data={mockChartData}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" stroke="#475569" />
+                <YAxis stroke="#475569" />
+                <RechartsTooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem' }} />
+                <Area type="monotone" dataKey="revenue" stroke="#6366f1" fillOpacity={1} fill="url(#colorRevenue)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </motion.div>
+          </div>
         ) : (
           <ContentCard className="rounded-[3rem] overflow-hidden border border-white/[0.04] bg-slate-900/20 backdrop-blur-md">
             <div className="p-8 flex flex-col md:flex-row justify-between items-center gap-8 bg-slate-900/40 border-b border-white/5">
@@ -411,6 +490,14 @@ export const AdminDashboard = () => {
                 />
               </div>
               
+              <div className="flex gap-4 w-full md:w-auto">
+                <button 
+                  onClick={exportToCSV}
+                  className="w-full md:w-auto flex items-center justify-center gap-3 px-8 py-4 bg-slate-800 text-slate-300 rounded-[1.2rem] font-black text-xs tracking-[0.2em] hover:bg-slate-700 transition-all border border-white/5 active:scale-95 group"
+                >
+                  <Download size={18} className="group-hover:-translate-y-1 transition-transform" /> 
+                  EXPORT
+                </button>
               {tab !== 'users' && (
                 <button 
                   onClick={() => openModal()}
@@ -420,6 +507,7 @@ export const AdminDashboard = () => {
                   {tab === 'events' ? ca.admin.new_event : ca.admin.new_session}
                 </button>
               )}
+              </div>
             </div>
 
             <div className="overflow-x-auto min-h-[500px]">
@@ -433,14 +521,20 @@ export const AdminDashboard = () => {
                   <motion.table key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full text-left border-collapse">
                     <thead className="bg-slate-950/30 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] border-b border-white/5">
                       <tr>
-                        <th className="py-8 px-10">{tab === 'sessions' ? ca.admin.venue : 'Nom / Títol'}</th>
-                        <th className="py-8 px-10">Dades Secundàries</th>
+                        <th className="py-8 px-10 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort(tab === 'sessions' ? 'venue' : (tab === 'events' ? 'title' : 'name'))}>
+                          {tab === 'sessions' ? ca.admin.venue : 'Nom / Títol'}
+                          <SortIcon columnKey={tab === 'sessions' ? 'venue' : (tab === 'events' ? 'title' : 'name')} />
+                        </th>
+                        <th className="py-8 px-10 cursor-pointer hover:text-white transition-colors" onClick={() => handleSort(tab === 'sessions' ? 'date_time' : 'email')}>
+                          Dades Secundàries
+                          <SortIcon columnKey={tab === 'sessions' ? 'date_time' : 'email'} />
+                        </th>
                         <th className="py-8 px-10 text-center">Estat / Detall</th>
                         <th className="py-8 px-10 text-right">{ca.common.actions}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
-                      {filteredData.map((item: any, idx: number) => (
+                      {paginatedData.map((item: any, idx: number) => (
                         <motion.tr 
                           key={item.id}
                           initial={{ opacity: 0, y: 10 }}
@@ -520,7 +614,7 @@ export const AdminDashboard = () => {
                           </td>
                         </motion.tr>
                       ))}
-                      {filteredData.length === 0 && (
+                      {paginatedData.length === 0 && (
                         <tr><td colSpan={4} className="py-48 text-center">
                           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-6">
                             <div className="w-24 h-24 bg-slate-900/50 rounded-[2rem] flex items-center justify-center border border-white/5">
@@ -535,6 +629,29 @@ export const AdminDashboard = () => {
                 )}
               </AnimatePresence>
             </div>
+            {totalPages > 1 && (
+              <div className="p-6 border-t border-white/5 flex items-center justify-between bg-slate-900/40 backdrop-blur-md">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest pl-4">
+                  Pàgina {currentPage} de {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-3 bg-slate-950 border border-white/5 text-white rounded-xl disabled:opacity-30 hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button 
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-3 bg-slate-950 border border-white/5 text-white rounded-xl disabled:opacity-30 hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
           </ContentCard>
         )}
         </div>
