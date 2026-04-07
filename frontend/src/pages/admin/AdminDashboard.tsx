@@ -7,7 +7,8 @@ import {
   Users, Calendar, LogOut, Plus, Loader2, 
   Search, Trash2, Edit3, X, Save, AlertCircle,
   MapPin, Music, Image as ImageIcon, ArrowRight,
-  Menu, LayoutDashboard
+  Menu, LayoutDashboard, DollarSign, Ticket as TicketIcon,
+  TrendingUp, PieChart, BarChart3
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocketContext } from '../../context/SocketContext';
@@ -71,16 +72,17 @@ const MenuVertical = ({
   );
 };
 
-type TabType = 'users' | 'events' | 'sessions';
+type TabType = 'users' | 'events' | 'sessions' | 'reports';
 
 export const AdminDashboard = () => {
   const [tab, setTab] = useState<TabType>('users');
   const [data, setData] = useState<any[]>([]);
   const [eventsForSessions, setEventsForSessions] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { logout, user } = useAuth();
-  const { notifyCatalogUpdate } = useSocketContext();
+  const { socket, joinDashboard, notifyCatalogUpdate } = useSocketContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Estats per als Modals
@@ -92,14 +94,19 @@ export const AdminDashboard = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const endpoint = tab === 'users' ? '/users' : (tab === 'events' ? '/events' : '/sessions');
-      const res = await api.get(endpoint);
-      setData(res.data.data || res.data);
-      
-      if (tab === 'sessions') {
-        const eventsRes = await api.get('/events');
-        setEventsForSessions(eventsRes.data.data || eventsRes.data);
+      if (tab !== 'reports') {
+        const endpoint = tab === 'users' ? '/users' : (tab === 'events' ? '/events' : '/sessions');
+        const res = await api.get(endpoint);
+        setData(res.data.data || res.data);
+        
+        if (tab === 'sessions') {
+          const eventsRes = await api.get('/events');
+          setEventsForSessions(eventsRes.data.data || eventsRes.data);
+        }
       }
+
+      const statsRes = await api.get('/admin/stats');
+      setStats(statsRes.data);
     } catch (err) {
       console.error('Error fetching data:', err);
       setData([]);
@@ -111,7 +118,25 @@ export const AdminDashboard = () => {
   useEffect(() => {
     fetchData();
     setIsMobileMenuOpen(false);
+    joinDashboard();
   }, [tab]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('catalog-changed', (data) => {
+      fetchData();
+    });
+
+    socket.on('seat-purchased', () => {
+      fetchData();
+    });
+
+    return () => {
+      socket.off('catalog-changed');
+      socket.off('seat-purchased');
+    };
+  }, [socket, tab]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm(ca.admin.confirm_delete)) return;
@@ -184,6 +209,7 @@ export const AdminDashboard = () => {
     { id: 'users', label: ca.admin.users, onClick: () => setTab('users') },
     { id: 'events', label: ca.admin.events, onClick: () => setTab('events') },
     { id: 'sessions', label: ca.admin.sessions, onClick: () => setTab('sessions') },
+    { id: 'reports', label: 'Informes', onClick: () => setTab('reports') },
   ];
 
   return (
@@ -284,156 +310,236 @@ export const AdminDashboard = () => {
               </div>
             </motion.div>
             
-            <motion.div 
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                className="hidden md:flex items-center gap-6 bg-slate-900/40 p-3 border border-white/5 rounded-[2rem] backdrop-blur-sm"
-            >
-              <div className="px-6 py-2">
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">{ca.admin.total_records}</p>
-                <p className="text-3xl font-black text-white italic tracking-tighter">{filteredData.length}</p>
-              </div>
-            </motion.div>
+            {tab !== 'reports' && (
+              <motion.div 
+                  initial={{ x: 20, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  className="hidden md:flex items-center gap-6 bg-slate-900/40 p-3 border border-white/5 rounded-[2rem] backdrop-blur-sm"
+              >
+                <div className="px-6 py-2">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1">{ca.admin.total_records}</p>
+                  <p className="text-3xl font-black text-white italic tracking-tighter">{filteredData.length}</p>
+                </div>
+              </motion.div>
+            )}
           </header>
 
-        <ContentCard className="rounded-[3rem] overflow-hidden border border-white/[0.04] bg-slate-900/20 backdrop-blur-md">
-          <div className="p-8 flex flex-col md:flex-row justify-between items-center gap-8 bg-slate-900/40 border-b border-white/5">
-            <div className="relative w-full md:w-[400px]">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
-              <input 
-                type="text" 
-                placeholder={ca.common.search} 
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-slate-950/50 border border-white/5 pl-14 pr-6 py-4 rounded-2xl focus:outline-none focus:border-indigo-500/50 text-sm transition-all text-slate-300 placeholder:text-slate-700 font-medium"
-              />
-            </div>
-            
-            {tab !== 'users' && (
-              <button 
-                onClick={() => openModal()}
-                className="w-full md:w-auto flex items-center justify-center gap-4 px-10 py-4 bg-indigo-600 text-white rounded-[1.2rem] font-black text-xs tracking-[0.2em] hover:bg-indigo-500 transition-all shadow-2xl shadow-indigo-600/20 active:scale-95 group"
-              >
-                <Plus size={20} className="group-hover:rotate-90 transition-transform" /> 
-                {tab === 'events' ? ca.admin.new_event : ca.admin.new_session}
-              </button>
-            )}
-          </div>
+        {tab === 'reports' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md">
+              <div className="flex items-center gap-5 mb-8">
+                <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center shadow-xl"><DollarSign size={28} /></div>
+                <div>
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Recaptació Total</h3>
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Ingressos per vendes</p>
+                </div>
+              </div>
+              <p className="text-7xl font-black text-white italic tracking-tighter leading-none mb-4">
+                {stats ? Number(stats.total_revenue).toFixed(2) : '0.00'}<span className="text-2xl ml-2 not-italic text-emerald-500">€</span>
+              </p>
+              <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden mt-10">
+                <div className="h-full bg-emerald-500 animate-shimmer" style={{ width: '70%' }} />
+              </div>
+            </motion.div>
 
-          <div className="overflow-x-auto min-h-[500px]">
-            <AnimatePresence mode="wait">
-              {loading ? (
-                <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-40">
-                  <Loader2 className="animate-spin text-indigo-500 w-16 h-16 mb-6 opacity-50" />
-                  <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">{ca.admin.syncing}</p>
-                </motion.div>
-              ) : (
-                <motion.table key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full text-left border-collapse">
-                  <thead className="bg-slate-950/30 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] border-b border-white/5">
-                    <tr>
-                      <th className="py-8 px-10">{tab === 'sessions' ? ca.admin.venue : 'Nom / Títol'}</th>
-                      <th className="py-8 px-10">Dades Secundàries</th>
-                      <th className="py-8 px-10 text-center">Estat / Detall</th>
-                      <th className="py-8 px-10 text-right">{ca.common.actions}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5 text-sm">
-                    {filteredData.map((item: any, idx: number) => (
-                      <motion.tr 
-                        key={item.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.03 }}
-                        className="hover:bg-white/[0.02] transition-colors group"
-                      >
-                        <td className="py-8 px-10 font-bold text-slate-100">
-                          {tab === 'sessions' ? (
-                            <div className="flex flex-col gap-2">
-                              <span className="text-lg italic tracking-tight">{item.venue}</span>
-                              <div className="flex items-center gap-3">
-                                <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
-                                <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{item.event_title || item.event?.title}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-lg italic tracking-tight">{item.name || item.title}</span>
-                          )}
-                        </td>
-                        <td className="py-8 px-10 text-slate-400 font-medium">
-                          {tab === 'users' ? (
-                            <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full bg-slate-800" />
-                              <span className="font-mono text-xs">{item.email}</span>
-                            </div>
-                          ) : 
-                           tab === 'events' ? (
-                            <div className="flex items-center gap-3 text-indigo-400/80">
-                              <Music size={16} />
-                              <span className="font-black uppercase tracking-widest text-[10px]">{item.artist}</span>
-                            </div>
-                           ) : (
-                            <div className="flex items-center gap-3 text-slate-500">
-                              <Calendar size={16} className="text-indigo-500/50" />
-                              <span className="font-bold">
-                                {new Date(item.date_time).toLocaleString('ca-ES', { 
-                                    day: '2-digit', 
-                                    month: '2-digit', 
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })}
-                              </span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-8 px-10 text-center">
-                          {tab === 'users' ? (
-                            <RoleBadge role={item.role} />
-                          ) : tab === 'events' ? (
-                            <div className="inline-flex items-center gap-3 px-5 py-2 bg-slate-950/50 border border-white/5 rounded-full">
-                              <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{item.sessions_count || 0} SESSIONS</span>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] font-black text-indigo-400/40 uppercase tracking-[0.3em] font-mono">REF: #{item.id}</span>
-                          )}
-                        </td>
-                        <td className="py-8 px-10 text-right">
-                          <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                            {tab !== 'users' && (
-                              <button 
-                                onClick={() => openModal(item)}
-                                className="p-3 text-slate-500 hover:text-white hover:bg-indigo-600 rounded-xl transition-all shadow-xl hover:shadow-indigo-600/30"
-                              >
-                                <Edit3 size={18} />
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => handleDelete(item.id)}
-                              className="p-3 text-slate-500 hover:text-white hover:bg-red-600 rounded-xl transition-all shadow-xl hover:shadow-red-600/30"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    ))}
-                    {filteredData.length === 0 && (
-                      <tr><td colSpan={4} className="py-48 text-center">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-6">
-                          <div className="w-24 h-24 bg-slate-900/50 rounded-[2rem] flex items-center justify-center border border-white/5">
-                            <Search className="text-slate-800" size={40} />
-                          </div>
-                          <p className="text-slate-600 text-lg font-black uppercase tracking-tighter italic">{ca.common.no_results}</p>
-                        </motion.div>
-                      </td></tr>
-                    )}
-                  </tbody>
-                </motion.table>
-              )}
-            </AnimatePresence>
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md">
+              <div className="flex items-center gap-5 mb-8">
+                <div className="w-14 h-14 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center shadow-xl"><TicketIcon size={28} /></div>
+                <div>
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Entrades Venudes</h3>
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Total tickets confirmats</p>
+                </div>
+              </div>
+              <p className="text-7xl font-black text-white italic tracking-tighter leading-none mb-4">
+                {stats ? stats.tickets_sold : '0'}
+              </p>
+              <div className="flex items-center gap-3 mt-10">
+                <TrendingUp className="text-indigo-400" size={20} />
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">En augment constant</p>
+              </div>
+            </motion.div>
+
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md">
+              <div className="flex items-center gap-5 mb-8">
+                <div className="w-14 h-14 bg-orange-500/10 text-orange-500 rounded-2xl flex items-center justify-center shadow-xl"><PieChart size={28} /></div>
+                <div>
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Ocupació Mitjana</h3>
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Percentatge del recinte</p>
+                </div>
+              </div>
+              <p className="text-7xl font-black text-white italic tracking-tighter leading-none mb-4">
+                {stats ? stats.occupancy_rate : '0'}<span className="text-2xl ml-2 not-italic text-orange-500">%</span>
+              </p>
+              <div className="w-full h-4 bg-slate-950 rounded-2xl overflow-hidden mt-10 p-1">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${stats?.occupancy_rate || 0}%` }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-xl" 
+                />
+              </div>
+            </motion.div>
+
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md">
+              <div className="flex items-center gap-5 mb-8">
+                <div className="w-14 h-14 bg-cyan-500/10 text-cyan-500 rounded-2xl flex items-center justify-center shadow-xl"><BarChart3 size={28} /></div>
+                <div>
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Resum de Catàleg</h3>
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Events i Sessions actives</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-6 mt-4">
+                <div className="p-6 bg-slate-950 rounded-2xl border border-white/5">
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Events</p>
+                  <p className="text-4xl font-black text-white italic tracking-tighter">{stats?.total_events || 0}</p>
+                </div>
+                <div className="p-6 bg-slate-950 rounded-2xl border border-white/5">
+                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Sessions</p>
+                  <p className="text-4xl font-black text-white italic tracking-tighter">{stats?.total_sessions || 0}</p>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </ContentCard>
+        ) : (
+          <ContentCard className="rounded-[3rem] overflow-hidden border border-white/[0.04] bg-slate-900/20 backdrop-blur-md">
+            <div className="p-8 flex flex-col md:flex-row justify-between items-center gap-8 bg-slate-900/40 border-b border-white/5">
+              <div className="relative w-full md:w-[400px]">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-600" size={20} />
+                <input 
+                  type="text" 
+                  placeholder={ca.common.search} 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full bg-slate-950/50 border border-white/5 pl-14 pr-6 py-4 rounded-2xl focus:outline-none focus:border-indigo-500/50 text-sm transition-all text-slate-300 placeholder:text-slate-700 font-medium"
+                />
+              </div>
+              
+              {tab !== 'users' && (
+                <button 
+                  onClick={() => openModal()}
+                  className="w-full md:w-auto flex items-center justify-center gap-4 px-10 py-4 bg-indigo-600 text-white rounded-[1.2rem] font-black text-xs tracking-[0.2em] hover:bg-indigo-500 transition-all shadow-2xl shadow-indigo-600/20 active:scale-95 group"
+                >
+                  <Plus size={20} className="group-hover:rotate-90 transition-transform" /> 
+                  {tab === 'events' ? ca.admin.new_event : ca.admin.new_session}
+                </button>
+              )}
+            </div>
+
+            <div className="overflow-x-auto min-h-[500px]">
+              <AnimatePresence mode="wait">
+                {loading ? (
+                  <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center justify-center py-40">
+                    <Loader2 className="animate-spin text-indigo-500 w-16 h-16 mb-6 opacity-50" />
+                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.5em] animate-pulse">{ca.admin.syncing}</p>
+                  </motion.div>
+                ) : (
+                  <motion.table key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full text-left border-collapse">
+                    <thead className="bg-slate-950/30 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] border-b border-white/5">
+                      <tr>
+                        <th className="py-8 px-10">{tab === 'sessions' ? ca.admin.venue : 'Nom / Títol'}</th>
+                        <th className="py-8 px-10">Dades Secundàries</th>
+                        <th className="py-8 px-10 text-center">Estat / Detall</th>
+                        <th className="py-8 px-10 text-right">{ca.common.actions}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 text-sm">
+                      {filteredData.map((item: any, idx: number) => (
+                        <motion.tr 
+                          key={item.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.03 }}
+                          className="hover:bg-white/[0.02] transition-colors group"
+                        >
+                          <td className="py-8 px-10 font-bold text-slate-100">
+                            {tab === 'sessions' ? (
+                              <div className="flex flex-col gap-2">
+                                <span className="text-lg italic tracking-tight">{item.venue}</span>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                                  <span className="text-[10px] text-slate-500 uppercase tracking-widest font-black">{item.event_title || item.event?.title}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-lg italic tracking-tight">{item.name || item.title}</span>
+                            )}
+                          </td>
+                          <td className="py-8 px-10 text-slate-400 font-medium">
+                            {tab === 'users' ? (
+                              <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 rounded-full bg-slate-800" />
+                                <span className="font-mono text-xs">{item.email}</span>
+                              </div>
+                            ) : 
+                             tab === 'events' ? (
+                              <div className="flex items-center gap-3 text-indigo-400/80">
+                                <Music size={16} />
+                                <span className="font-black uppercase tracking-widest text-[10px]">{item.artist}</span>
+                              </div>
+                             ) : (
+                              <div className="flex items-center gap-3 text-slate-500">
+                                <Calendar size={16} className="text-indigo-500/50" />
+                                <span className="font-bold">
+                                  {new Date(item.date_time).toLocaleString('ca-ES', { 
+                                      day: '2-digit', 
+                                      month: '2-digit', 
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-8 px-10 text-center">
+                            {tab === 'users' ? (
+                              <RoleBadge role={item.role} />
+                            ) : tab === 'events' ? (
+                              <div className="inline-flex items-center gap-3 px-5 py-2 bg-slate-950/50 border border-white/5 rounded-full">
+                                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{item.sessions_count || 0} SESSIONS</span>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] font-black text-indigo-400/40 uppercase tracking-[0.3em] font-mono">REF: #{item.id}</span>
+                            )}
+                          </td>
+                          <td className="py-8 px-10 text-right">
+                            <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                              {tab !== 'users' && (
+                                <button 
+                                  onClick={() => openModal(item)}
+                                  className="p-3 text-slate-500 hover:text-white hover:bg-indigo-600 rounded-xl transition-all shadow-xl hover:shadow-indigo-600/30"
+                                >
+                                  <Edit3 size={18} />
+                                </button>
+                              )}
+                              <button 
+                                onClick={() => handleDelete(item.id)}
+                                className="p-3 text-slate-500 hover:text-white hover:bg-red-600 rounded-xl transition-all shadow-xl hover:shadow-red-600/30"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                      ))}
+                      {filteredData.length === 0 && (
+                        <tr><td colSpan={4} className="py-48 text-center">
+                          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-6">
+                            <div className="w-24 h-24 bg-slate-900/50 rounded-[2rem] flex items-center justify-center border border-white/5">
+                              <Search className="text-slate-800" size={40} />
+                            </div>
+                            <p className="text-slate-600 text-lg font-black uppercase tracking-tighter italic">{ca.common.no_results}</p>
+                          </motion.div>
+                        </td></tr>
+                      )}
+                    </tbody>
+                  </motion.table>
+                )}
+              </AnimatePresence>
+            </div>
+          </ContentCard>
+        )}
         </div>
       </main>
 

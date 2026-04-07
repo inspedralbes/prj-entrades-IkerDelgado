@@ -68,9 +68,16 @@ export const SeatSelection = () => {
     }, [socket]);
 
     const toggleSeat = (seatId: number) => {
-        setSelectedSeats(prev => 
-            prev.includes(seatId) ? prev.filter(id => id !== seatId) : [...prev, seatId]
-        );
+        setSelectedSeats(prev => {
+            if (prev.includes(seatId)) {
+                return prev.filter(id => id !== seatId);
+            }
+            if (prev.length >= 5) {
+                alert("Només pots seleccionar un màxim de 5 seients per compra.");
+                return prev;
+            }
+            return [...prev, seatId];
+        });
     };
 
     const totalPrice = seats
