@@ -23,6 +23,7 @@ const mockChartData = [
 ];
 import { useAuth } from '../../context/AuthContext';
 import { useSocketContext } from '../../context/SocketContext';
+import { useToast } from '../../context/ToastContext';
 import { ContentCard, RoleBadge } from '../../components/ui/DashboardUI';
 import { ca } from '../../locales/ca';
 
@@ -97,6 +98,7 @@ export const AdminDashboard = () => {
   const itemsPerPage = 8;
   const { logout, user } = useAuth();
   const { socket, joinDashboard, notifyCatalogUpdate } = useSocketContext();
+  const { showToast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -126,6 +128,8 @@ export const AdminDashboard = () => {
 
   // Estats per als Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [formData, setFormData] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -178,17 +182,26 @@ export const AdminDashboard = () => {
   }, [socket, tab]);
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(ca.admin.confirm_delete)) return;
+    setItemToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
     
     try {
-      const endpoint = tab === 'users' ? `/users/${id}` : (tab === 'events' ? `/events/${id}` : `/sessions/${id}`);
+      const endpoint = tab === 'users' ? `/users/${itemToDelete}` : (tab === 'events' ? `/events/${itemToDelete}` : `/sessions/${itemToDelete}`);
       await api.delete(endpoint);
-      setData(data.filter(item => item.id !== id));
+      setData(data.filter(item => item.id !== itemToDelete));
       if (tab !== 'users') {
         notifyCatalogUpdate(tab === 'events' ? 'event' : 'session', 'deleted');
       }
+      showToast("Registre eliminat correctament", "success");
     } catch (err: any) {
-      alert(err.response?.data?.message || ca.common.error);
+      showToast(err.response?.data?.message || ca.common.error, "error");
+    } finally {
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
     }
   };
 
@@ -226,8 +239,11 @@ export const AdminDashboard = () => {
         notifyCatalogUpdate(tab === 'events' ? 'event' : 'session', 'created');
         showToast("Creat correctament", "success");
       }
-      await fetchData();
+      
+      // Tanquem el modal immediatament per millorar la UX
       closeModal();
+      // Refresquem dades en segon pla
+      fetchData();
     } catch (err: any) {
       showToast(err.response?.data?.message || ca.common.error, "error");
     } finally {
@@ -658,6 +674,49 @@ export const AdminDashboard = () => {
         )}
         </div>
       </main>
+
+      {/* MODAL DE CONFIRMACIÓ D'ELIMINACIÓ */}
+      <AnimatePresence>
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="absolute inset-0 bg-slate-950/90 backdrop-blur-md" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-slate-900 border border-red-500/20 rounded-[2.5rem] p-10 shadow-[0_0_100px_rgba(239,68,68,0.1)] text-center"
+            >
+              <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+                <Trash2 size={40} />
+              </div>
+              <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter mb-4">Confirmar Eliminació</h2>
+              <p className="text-slate-400 text-sm font-medium leading-relaxed mb-10">
+                Estàs segur que vols eliminar aquest registre? Aquesta acció és permanent i no es pot desfer.
+              </p>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setIsDeleteModalOpen(false)}
+                  className="flex-1 py-5 bg-slate-800 text-slate-300 font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-700 transition-all active:scale-95"
+                >
+                  CANCEL·LAR
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  className="flex-1 py-5 bg-red-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-red-500 transition-all shadow-2xl shadow-red-600/30 active:scale-95"
+                >
+                  ELIMINAR
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* MODAL (Create/Edit) */}
       <AnimatePresence>
