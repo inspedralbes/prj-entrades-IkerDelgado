@@ -220,14 +220,16 @@ export const AdminDashboard = () => {
       if (editingItem) {
         await api.put(`${endpoint}/${editingItem.id}`, formData);
         notifyCatalogUpdate(tab === 'events' ? 'event' : 'session', 'updated');
+        showToast("Actualitzat correctament", "success");
       } else {
         await api.post(endpoint, formData);
         notifyCatalogUpdate(tab === 'events' ? 'event' : 'session', 'created');
+        showToast("Creat correctament", "success");
       }
       await fetchData();
       closeModal();
     } catch (err: any) {
-      alert(err.response?.data?.message || ca.common.error);
+      showToast(err.response?.data?.message || ca.common.error, "error");
     } finally {
       setIsSaving(false);
     }

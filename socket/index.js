@@ -80,40 +80,15 @@ async function startServer() {
                 console.log(`Client ${socket.id} left ${room}`);
             });
 
-            // Bloquejar seient (Client -> Server -> Broadcast)
+            // Bloqueig instantani via Socket (Fast Path per a la UI)
             socket.on('lock-seat', ({ sessionId, seatStatusId, userId }) => {
                 const room = `session_${sessionId}`;
-                console.log(`Locking seat ${seatStatusId} in ${room} by user ${userId}`);
-
-                // Broadcast a TOTS a la sala (incloent el sender per si de cas)
-                io.to(room).emit('seat-locked', { seatStatusId, userId });
-
-                // Gestionar timeout de 5 minuts
-                const timeoutKey = `${sessionId}_${seatStatusId}`;
-                if (lockTimeouts.has(timeoutKey)) {
-                    clearTimeout(lockTimeouts.get(timeoutKey));
-                }
-
-                const timeout = setTimeout(() => {
-                    io.to(room).emit('lock-expired', { seatStatusId });
-                    lockTimeouts.delete(timeoutKey);
-                }, 5 * 60 * 1000); // 5 minuts
-
-                lockTimeouts.set(timeoutKey, timeout);
+                socket.to(room).emit('seat-locked', { seatStatusId, userId });
             });
 
-            // Desbloquejar seient
-            socket.on('unlock-seat', ({ sessionId, seatStatusId, userId }) => {
+            socket.on('unlock-seat', ({ sessionId, seatStatusId }) => {
                 const room = `session_${sessionId}`;
-                console.log(`Unlocking seat ${seatStatusId} in ${room}`);
-
-                io.to(room).emit('seat-unlocked', { seatStatusId });
-
-                const timeoutKey = `${sessionId}_${seatStatusId}`;
-                if (lockTimeouts.has(timeoutKey)) {
-                    clearTimeout(lockTimeouts.get(timeoutKey));
-                    lockTimeouts.delete(timeoutKey);
-                }
+                socket.to(room).emit('seat-unlocked', { seatStatusId });
             });
 
             socket.on('disconnect', () => {

@@ -56,15 +56,19 @@ class SeatController extends Controller
                     'user_id' => $user->id,
                     'locked_at' => now(),
                 ]);
-
-                // Notificar per Redis
-                Redis::publish('seat-updates', json_encode([
-                    'event' => 'seat-locked',
-                    'sessionId' => $request->session_id,
-                    'seatStatusId' => $seat->id,
-                    'userId' => $user->id
-                ]));
             }
+
+            // Notificar per Redis després de fer el commit per rendiment i consistència
+            DB::afterCommit(function () use ($request, $seats, $user) {
+                foreach ($seats as $seat) {
+                    Redis::publish('seat-updates', json_encode([
+                        'event' => 'seat-locked',
+                        'sessionId' => $request->session_id,
+                        'seatStatusId' => $seat->id,
+                        'userId' => $user->id
+                    ]));
+                }
+            });
 
             return response()->json(['message' => 'Seients bloquejats correctament per 5 minuts.']);
         });
@@ -97,7 +101,8 @@ class SeatController extends Controller
             Redis::publish('seat-updates', json_encode([
                 'event' => 'seat-unlocked',
                 'sessionId' => $request->session_id,
-                'seatStatusId' => $seat->id
+                'seatStatusId' => $seat->id,
+                'userId' => $user->id
             ]));
         }
 

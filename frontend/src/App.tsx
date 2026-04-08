@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
+import { ToastProvider } from './context/ToastContext';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -105,13 +106,15 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="bg-mesh" />
-        <SocketProvider>
-          <AppRoutes />
-          <CookieConsent />
-        </SocketProvider>
-      </Router>
+      <ToastProvider>
+        <Router>
+          <div className="bg-mesh" />
+          <SocketProvider>
+            <AppRoutes />
+            <CookieConsent />
+          </SocketProvider>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

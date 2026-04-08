@@ -13,6 +13,7 @@ class SeatStatusResource extends JsonResource
             'id' => $this->id,
             'session_id' => $this->session_id,
             'seat_id' => $this->seat_id,
+            'user_id' => $this->user_id,
             'row' => $this->seat->row_number,
             'number' => $this->seat->seat_number,
             'price' => $this->seat->price, // Enviem el preu a la vista

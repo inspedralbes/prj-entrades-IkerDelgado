@@ -1,22 +1,24 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ChevronLeft, CreditCard, User, Mail, MapPin, Clock, ShieldCheck, Loader2 } from 'lucide-react';
 import api from '../../api/axios';
 import { useSocketContext } from '../../context/SocketContext';
+import { useToast } from '../../context/ToastContext';
 import { ca } from '../../locales/ca';
 
 export const CheckoutPage = () => {
     const { id: sessionId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const { selectedSeats, seatsInfo, totalPrice } = location.state || { selectedSeats: [], seatsInfo: [], totalPrice: 0 };
+    const { selectedSeats, seatsInfo, totalPrice, initialTimeLeft } = location.state || { selectedSeats: [], seatsInfo: [], totalPrice: 0, initialTimeLeft: 300 };
     const { socket, joinSession, leaveSession } = useSocketContext();
+    const { showToast } = useToast();
 
-    const [timeLeft, setTimeLeft] = useState(300); // 5 minuts en segons
+    const [timeLeft, setTimeLeft] = useState<number>(Number(initialTimeLeft) || 300); // Sincronitzem amb els segons de la pantalla anterior
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [formData, setFormData] = useState({
+    const [formData] = useState({
         name: 'Joan Sala',
         email: 'joan.sala@example.com',
         address: 'Carrer Major 123, Barcelona'
@@ -32,15 +34,26 @@ export const CheckoutPage = () => {
             joinSession(sessionId);
         }
 
+        const timerKey = `buy_timer_${sessionId}`;
+        const expireTimeStr = sessionStorage.getItem(timerKey);
+        
+        if (!expireTimeStr) {
+            // Si per algun motiu no hi ha timer, el creem (no hauria de passar si venim de SeatSelection)
+            const expireTime = new Date().getTime() + 5 * 60 * 1000;
+            sessionStorage.setItem(timerKey, expireTime.toString());
+        }
+
+        const expireTime = parseInt(sessionStorage.getItem(timerKey)!, 10);
+
         const timer = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(timer);
-                    handleExpire();
-                    return 0;
-                }
-                return prev - 1;
-            });
+            const now = new Date().getTime();
+            const diff = Math.max(0, Math.floor((expireTime - now) / 1000));
+            setTimeLeft(diff);
+            
+            if (diff === 0) {
+                clearInterval(timer);
+                handleExpire();
+            }
         }, 1000);
 
         return () => {
@@ -49,14 +62,14 @@ export const CheckoutPage = () => {
                 leaveSession(sessionId);
             }
         };
-    }, [sessionId]);
+    }, [sessionId, selectedSeats]);
 
     useEffect(() => {
         if (!socket) return;
 
         socket.on('lock-expired', ({ seatStatusId }) => {
             if (selectedSeats.includes(seatStatusId)) {
-                alert('La teva reserva ha expirat al servidor.');
+                showToast('La teva reserva ha expirat al servidor.', "error");
                 navigate(`/session/${sessionId}/seats`);
             }
         });
@@ -67,8 +80,13 @@ export const CheckoutPage = () => {
     }, [socket, selectedSeats, sessionId]);
 
     const handleExpire = async () => {
-        alert('El temps de reserva ha expirat. Torna a seleccionar els teus seients.');
+        showToast('El temps de reserva ha expirat. Torna a seleccionar els teus seients.', "error");
+        sessionStorage.removeItem(`buy_timer_${sessionId}`);
         try {
+            // Alliberem visualment per socket ràpidament
+            for (const id of selectedSeats) {
+                socket?.emit('unlock-seat', { sessionId, seatStatusId: id });
+            }
             await api.post('/seats/unlock', { session_id: sessionId, seat_status_ids: selectedSeats });
         } catch (e) {
             console.error("Error unlocking on expire", e);
@@ -77,7 +95,12 @@ export const CheckoutPage = () => {
     };
 
     const handleCancel = async () => {
+        sessionStorage.removeItem(`buy_timer_${sessionId}`);
         try {
+            // Alliberem visualment per socket ràpidament
+            for (const id of selectedSeats) {
+                socket?.emit('unlock-seat', { sessionId, seatStatusId: id });
+            }
             await api.post('/seats/unlock', { session_id: sessionId, seat_status_ids: selectedSeats });
         } catch (e) {
             console.error("Error unlocking on cancel", e);
@@ -90,10 +113,11 @@ export const CheckoutPage = () => {
         setIsSubmitting(true);
         try {
             await api.post('/purchase', { seat_status_ids: selectedSeats });
-            alert('Compra realitzada amb èxit! Gaudeix del concert.');
+            sessionStorage.removeItem(`buy_timer_${sessionId}`);
+            showToast('Compra realitzada amb èxit! Gaudeix del concert.', "success");
             navigate('/dashboard');
         } catch (error: any) {
-            alert(error.response?.data?.message || 'Error en completar la compra.');
+            showToast(error.response?.data?.message || 'Error en completar la compra.', "error");
             setIsSubmitting(false);
         }
     };
