@@ -284,8 +284,8 @@ export const AdminDashboard = () => {
       <aside className="hidden lg:flex flex-col w-80 bg-slate-950/40 backdrop-blur-3xl border-r border-white/5 h-screen sticky top-0 z-20 p-10 shrink-0">
         <div className="mb-16">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-black tracking-tighter text-white cursor-default group">
-                TICKET<span className="text-indigo-500">HUB</span>
+            <h1 className="text-2xl font-black tracking-tighter text-white cursor-default group italic">
+                TICKET<span className="text-indigo-500 group-hover:text-cyan-400 transition-colors">HUB</span>
             </h1>
           </div>
           <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] pl-1">{ca.admin.system_version}</p>
@@ -309,9 +309,9 @@ export const AdminDashboard = () => {
       </aside>
 
       {/* MOBILE HEADER */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-slate-950/60 backdrop-blur-2xl border-b border-white/5 z-30 px-6 py-4 flex justify-between items-center">
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-slate-950/60 backdrop-blur-2xl border-b border-white/5 z-30 px-6 py-4 flex justify-between items-center group">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-black text-white tracking-tighter italic">TICKET<span className="text-indigo-500">HUB</span></h1>
+          <h1 className="text-xl font-black text-white tracking-tighter italic">TICKET<span className="text-indigo-500 group-hover:text-cyan-400 transition-colors">HUB</span></h1>
         </div>
         <div className="flex gap-2">
            <button 

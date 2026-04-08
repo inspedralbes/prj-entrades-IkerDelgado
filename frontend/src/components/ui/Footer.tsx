@@ -15,10 +15,9 @@ export const Footer = () => {
                     {/* Brand */}
                     <div className="max-w-md">
                         <motion.span 
-                            whileHover={{ scale: 1.05 }}
-                            className="text-3xl font-black tracking-tighter text-white cursor-default inline-block italic"
+                            className="text-3xl font-black tracking-tighter text-white cursor-default inline-block italic group"
                         >
-                            TICKET<span className="text-indigo-500">HUB</span>
+                            TICKET<span className="text-indigo-500 group-hover:text-cyan-400 transition-colors">HUB</span>
                         </motion.span>
                         <p className="text-slate-500 text-lg mt-6 leading-relaxed font-medium">
                             La teva plataforma de confiança per descobrir i reservar entrades per als millors esdeveniments. Viu la música com mai.

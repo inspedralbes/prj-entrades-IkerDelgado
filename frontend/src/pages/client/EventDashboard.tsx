@@ -99,7 +99,7 @@ export const EventDashboard = () => {
                     <motion.span 
                         initial={{ x: -20, opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
-                        className="text-2xl font-black tracking-tighter text-white cursor-pointer group" 
+                        className="text-2xl font-black tracking-tighter text-white cursor-pointer group italic" 
                         onClick={() => navigate('/dashboard')}
                     >
                         TICKET<span className="text-indigo-500 group-hover:text-cyan-400 transition-colors">HUB</span>

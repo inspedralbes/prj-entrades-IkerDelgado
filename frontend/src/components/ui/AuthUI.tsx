@@ -251,13 +251,13 @@ function SignInForm() {
       className="flex flex-col gap-6"
     >
       <div className="flex flex-col items-center gap-2 text-center mb-2">
-        <h1 className="text-2xl font-bold text-white">Iniciar Sessió</h1>
+        <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">Iniciar Sessió</h1>
         <p className="text-balance text-sm text-slate-400">
           Introdueix les teves dades per continuar
         </p>
       </div>
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg text-center">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg text-center font-bold">
           {error}
         </div>
       )}
@@ -287,7 +287,7 @@ function SignInForm() {
         <Button
           type="submit"
           variant="default"
-          className="mt-2"
+          className="mt-2 h-12 font-black uppercase italic tracking-wider"
           disabled={loading}
         >
           {loading ? (
@@ -365,13 +365,13 @@ function SignUpForm() {
       className="flex flex-col gap-6"
     >
       <div className="flex flex-col items-center gap-2 text-center mb-2">
-        <h1 className="text-2xl font-bold text-white">Crear Compte</h1>
+        <h1 className="text-3xl font-black text-white uppercase italic tracking-tighter leading-none">Crear Compte</h1>
         <p className="text-balance text-sm text-slate-400">
           Introdueix les teves dades per registrar-te
         </p>
       </div>
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg text-center">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg text-center font-bold">
           {error}
         </div>
       )}
@@ -423,7 +423,7 @@ function SignUpForm() {
         <Button
           type="submit"
           variant="default"
-          className="mt-2"
+          className="mt-2 h-12 font-black uppercase italic tracking-wider"
           disabled={loading}
         >
           {loading ? (
@@ -450,8 +450,8 @@ function AuthFormContainer({
     <div className="mx-auto grid w-[350px] gap-6">
       {isSignIn ? <SignInForm /> : <SignUpForm />}
       <div className="text-center text-sm">
-        {isSignIn ? "No tens cap compte?" : "Ja tens un compte?"}{" "}
-        <Button variant="link" className="pl-1 text-white" onClick={onToggle}>
+        <span className="text-slate-500">{isSignIn ? "No tens cap compte?" : "Ja tens un compte?"}</span>{" "}
+        <Button variant="link" className="pl-1 text-white font-bold" onClick={onToggle}>
           {isSignIn ? "Registra't" : "Inicia sessió"}
         </Button>
       </div>
