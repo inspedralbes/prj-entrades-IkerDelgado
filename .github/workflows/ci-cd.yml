@@ -161,7 +161,6 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           timeout: 30m
           command_timeout: 30m
-          script_stop: true
           script: |
             set -e
             APP_DIR="${{ env.APP_DIR }}"
@@ -169,10 +168,18 @@ jobs:
 
             echo "🚀 Deploying commit ${{ github.sha }}"
 
-            # ── 1. Pull latest code ──
+            # ── 1. Ensure directory and git repo ──
+            mkdir -p $APP_DIR
             cd $APP_DIR
-            git fetch origin main
-            git reset --hard origin/main
+
+            if [ ! -d ".git" ]; then
+              echo "  Cloning repository for the first time..."
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              echo "  Fetching latest changes..."
+              git fetch origin main
+              git reset --hard origin/main
+            fi
 
             # ── 2. Build & restart ──
             $COMPOSE down --remove-orphans
