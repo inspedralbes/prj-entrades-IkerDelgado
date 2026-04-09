@@ -1,4 +1,5 @@
 services:
+  # Database (MySQL 8.0)
   mysql:
     image: mysql:8.0
     container_name: ticket-mysql-prod
@@ -10,9 +11,11 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - dbdata_prod:/var/lib/mysql
+      # Opcional: - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - ticket-network-prod
 
+  # Redis (Communication Laravel <-> Socket)
   redis:
     image: redis:alpine
     container_name: ticket-redis-prod
@@ -20,12 +23,14 @@ services:
     networks:
       - ticket-network-prod
 
+  # Laravel API (PHP-FPM)
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
     container_name: ticket-api-prod
     restart: always
+    working_dir: /var/www
     environment:
       APP_ENV: production
       DB_HOST: mysql
@@ -36,6 +41,7 @@ services:
     networks:
       - ticket-network-prod
 
+  # Nginx (Serving the API)
   nginx:
     image: nginx:alpine
     container_name: ticket-nginx-prod
@@ -43,23 +49,43 @@ services:
     ports:
       - "80:80"
     volumes:
+      # En prod no se mapea el código con volúmenes, se usa el COPY del Dockerfile
       - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - api
     networks:
       - ticket-network-prod
 
+  # Socket Server (Node.js)
   socket:
     build:
       context: ./socket
       dockerfile: Dockerfile
     container_name: ticket-socket-prod
     restart: always
+    ports:
+      - "3000:3000"
     environment:
       NODE_ENV: production
       REDIS_HOST: redis
     depends_on:
       - redis
+    networks:
+      - ticket-network-prod
+
+  # Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ticket-frontend-prod
+    restart: always
+    ports:
+      - "5173:5173"
+    environment:
+      # En producción, estas URLs deben ser las finales del servidor
+      VITE_API_URL: ${VITE_API_URL_PROD}
+      VITE_SOCKET_URL: ${VITE_SOCKET_URL_PROD}
     networks:
       - ticket-network-prod
 

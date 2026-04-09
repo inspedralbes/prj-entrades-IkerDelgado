@@ -26,5 +26,14 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www
 
+# Copiamos los archivos de la aplicación
+COPY . .
+
+# Instalamos dependencias de PHP con Composer
+RUN composer install --no-interaction --no-dev --optimize-autoloader
+
+# Ajustamos permisos
+RUN chown -R www-data:www-data storage bootstrap/cache
+
 EXPOSE 9000
 CMD ["php-fpm"]
