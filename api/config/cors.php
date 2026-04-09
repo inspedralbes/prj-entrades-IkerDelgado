@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'paths' => [''],
+    'paths' => [], // Nginx lo hará por nosotros
     'allowed_methods' => ['*'],
     'allowed_origins' => ['*'],
     'allowed_origins_patterns' => [],
