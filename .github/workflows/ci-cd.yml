@@ -18,7 +18,7 @@ concurrency:
 
 env:
   NODE_VERSION: "20"
-  PHP_VERSION: "8.3"
+  PHP_VERSION: "8.4"
   APP_DIR: ${{ secrets.APP_DIR }}
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
         working-directory: frontend
         run: |
           npm ci
-          npm run lint --if-present || true
+          npm run lint --if-present || echo "⚠️ Frontend lint warnings found, but continuing..."
 
       - name: Setup PHP for linting
         uses: shivammathur/setup-php@v2
@@ -54,7 +54,7 @@ jobs:
         working-directory: api
         run: |
           composer install --no-interaction --prefer-dist --no-scripts
-          ./vendor/bin/pint --test || true
+          ./vendor/bin/pint --test || echo "⚠️ Backend lint warnings found, but continuing..."
 
   # ─────────────────────────────────────────────────────────
   #  2. Test
