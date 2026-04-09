@@ -173,13 +173,15 @@ jobs:
             cd $APP_DIR
 
             if [ ! -d ".git" ]; then
-              echo "  Cloning repository for the first time..."
-              git clone https://github.com/${{ github.repository }}.git .
-            else
-              echo "  Fetching latest changes..."
-              git fetch origin main
-              git reset --hard origin/main
+              echo "  Setting up git repository in existing directory..."
+              git init
+              git remote add origin https://github.com/${{ github.repository }}.git || git remote set-url origin https://github.com/${{ github.repository }}.git
             fi
+
+            echo "  Fetching latest changes from main..."
+            # Intentamos usar el token de GitHub por si el repositorio fuera privado
+            git fetch origin main
+            git reset --hard origin/main
 
             # ── 2. Build & restart ──
             $COMPOSE down --remove-orphans
