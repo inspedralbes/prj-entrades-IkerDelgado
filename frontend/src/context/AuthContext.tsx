@@ -27,7 +27,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const checkUser = async () => {
       if (token) {
         try {
-          const res = await fetch('http://127.0.0.1:8000/api/user', {
+          const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
+          const res = await fetch(`${baseUrl}/user`, {
             headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
           });
           if (res.ok) {
