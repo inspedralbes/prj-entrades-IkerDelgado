@@ -182,6 +182,18 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            # ── 1.5. SSL Bootstrap (Dummy certs if not exist) ──
+            DOMAIN="tickethub.daw.inspedralbes.cat"
+            CERT_DIR="./docker/certbot/conf/live/$DOMAIN"
+            if [ ! -f "$CERT_DIR/fullchain.pem" ]; then
+              echo "⚠️ SSL certificates not found. Creating dummy certificates to allow Nginx to start..."
+              mkdir -p "$CERT_DIR"
+              openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
+                -keyout "$CERT_DIR/privkey.pem" \
+                -out "$CERT_DIR/fullchain.pem" \
+                -subj "/CN=$DOMAIN"
+            fi
+
             # ── 2. Build & restart ──
             $COMPOSE down --remove-orphans
             $COMPOSE build
@@ -229,14 +241,14 @@ jobs:
             for i in $(seq 1 15); do
               # Check if API is responding (via internal artisan check)
               API_OK=$($COMPOSE exec -T api php artisan tinker --execute="echo 'OK';" 2>/dev/null | grep -c "OK" || true)
-              # Check if NGINX (WEB) is responding on port 80
-              WEB_OK=$(nc -z 127.0.0.1 80 2>/dev/null && echo 1 || echo 0)
+              # Check if NGINX (WEB) is responding on port 80 or 443
+              WEB_OK=$(nc -z 127.0.0.1 80 2>/dev/null && echo 1 || (nc -z 127.0.0.1 443 2>/dev/null && echo 1 || echo 0))
               # Check if Socket server is responding on port 3000
               SOCKET_OK=$(nc -z 127.0.0.1 3000 2>/dev/null && echo 1 || echo 0)
               
               # Check if Frontend is accessible through NGINX (internal request)
-              # Usamos curl para ver si devuelve algo el puerto 80 en la raiz (que ahora es el front)
-              FRONT_OK=$(curl -s -I http://127.0.0.1 | grep -q "200 OK" && echo 1 || echo 0)
+              # Usamos -L (follow redirect) y -k (insecure/dummy certs)
+              FRONT_OK=$(curl -s -L -k -I http://127.0.0.1 | grep -q "200 OK" && echo 1 || echo 0)
               # Si curl falla, probamos si al menos el contenedor de frontend está UP
               if [ "$FRONT_OK" = "0" ]; then
                 FRONT_OK=$(docker ps --filter "name=ticket-frontend-prod" --filter "status=running" -q | grep -q . && echo 1 || echo 0)
