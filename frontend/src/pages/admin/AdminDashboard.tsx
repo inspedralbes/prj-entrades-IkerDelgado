@@ -10,17 +10,7 @@ import {
   Menu, LayoutDashboard, DollarSign, Ticket as TicketIcon,
   TrendingUp, PieChart, BarChart3, Download, ChevronUp, ChevronDown, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 
-const mockChartData = [
-  { name: 'Dl', revenue: 400, tickets: 24 },
-  { name: 'Dt', revenue: 300, tickets: 13 },
-  { name: 'Dc', revenue: 550, tickets: 38 },
-  { name: 'Dj', revenue: 200, tickets: 10 },
-  { name: 'Dv', revenue: 900, tickets: 65 },
-  { name: 'Ds', revenue: 1200, tickets: 90 },
-  { name: 'Dg', revenue: 800, tickets: 50 },
-];
 import { useAuth } from '../../context/AuthContext';
 import { useSocketContext } from '../../context/SocketContext';
 import { useToast } from '../../context/ToastContext';
@@ -399,100 +389,106 @@ export const AdminDashboard = () => {
           </header>
 
         {tab === 'reports' ? (
-          <div className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="bg-slate-900/40 border border-white/5 p-8 rounded-[2.5rem] backdrop-blur-md">
-              <div className="flex items-center gap-5 mb-8">
-                <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center shadow-xl"><DollarSign size={28} /></div>
-                <div>
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Recaptació Total</h3>
-                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Ingressos per vendes</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+
+            {/* Recaptació Total */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 sm:p-8 backdrop-blur-md flex flex-col gap-4 hover:border-emerald-500/20 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center shadow-xl group-hover:bg-emerald-500/20 transition-colors">
+                  <DollarSign size={24} />
                 </div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500/60 bg-emerald-500/10 px-3 py-1 rounded-full">Ingressos</span>
               </div>
-              <p className="text-7xl font-black text-white italic tracking-tighter leading-none mb-4">
-                {stats ? Number(stats.total_revenue).toFixed(2) : '0.00'}<span className="text-2xl ml-2 not-italic text-emerald-500">€</span>
-              </p>
-              <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden mt-10">
-                <div className="h-full bg-emerald-500 animate-shimmer" style={{ width: '70%' }} />
+              <div>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Recaptació Total</p>
+                <p className="text-4xl sm:text-5xl font-black text-white italic tracking-tighter leading-none">
+                  {stats ? Number(stats.total_revenue).toFixed(0) : '0'}
+                  <span className="text-xl ml-1 not-italic text-emerald-500">€</span>
+                </p>
+              </div>
+              <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden mt-auto">
+                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '70%' }} />
               </div>
             </motion.div>
 
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md">
-              <div className="flex items-center gap-5 mb-8">
-                <div className="w-14 h-14 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center shadow-xl"><TicketIcon size={28} /></div>
-                <div>
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Entrades Venudes</h3>
-                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Total tickets confirmats</p>
+            {/* Entrades Venudes */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.08 }}
+              className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 sm:p-8 backdrop-blur-md flex flex-col gap-4 hover:border-indigo-500/20 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center shadow-xl group-hover:bg-indigo-500/20 transition-colors">
+                  <TicketIcon size={24} />
                 </div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-indigo-500/60 bg-indigo-500/10 px-3 py-1 rounded-full">Vendes</span>
               </div>
-              <p className="text-7xl font-black text-white italic tracking-tighter leading-none mb-4">
-                {stats ? stats.tickets_sold : '0'}
-              </p>
-              <div className="flex items-center gap-3 mt-10">
-                <TrendingUp className="text-indigo-400" size={20} />
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">En augment constant</p>
+              <div>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Entrades Venudes</p>
+                <p className="text-4xl sm:text-5xl font-black text-white italic tracking-tighter leading-none">
+                  {stats ? stats.tickets_sold : '0'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 mt-auto">
+                <TrendingUp className="text-indigo-400" size={16} />
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">En augment constant</p>
               </div>
             </motion.div>
 
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md">
-              <div className="flex items-center gap-5 mb-8">
-                <div className="w-14 h-14 bg-orange-500/10 text-orange-500 rounded-2xl flex items-center justify-center shadow-xl"><PieChart size={28} /></div>
-                <div>
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Ocupació Mitjana</h3>
-                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Percentatge del recinte</p>
+            {/* Ocupació */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.16 }}
+              className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 sm:p-8 backdrop-blur-md flex flex-col gap-4 hover:border-orange-500/20 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 bg-orange-500/10 text-orange-500 rounded-2xl flex items-center justify-center shadow-xl group-hover:bg-orange-500/20 transition-colors">
+                  <PieChart size={24} />
                 </div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-orange-500/60 bg-orange-500/10 px-3 py-1 rounded-full">Ocupació</span>
               </div>
-              <p className="text-7xl font-black text-white italic tracking-tighter leading-none mb-4">
-                {stats ? stats.occupancy_rate : '0'}<span className="text-2xl ml-2 not-italic text-orange-500">%</span>
-              </p>
-              <div className="w-full h-4 bg-slate-950 rounded-2xl overflow-hidden mt-10 p-1">
-                <motion.div 
+              <div>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Ocupació Mitjana</p>
+                <p className="text-4xl sm:text-5xl font-black text-white italic tracking-tighter leading-none">
+                  {stats ? stats.occupancy_rate : '0'}
+                  <span className="text-xl ml-1 not-italic text-orange-500">%</span>
+                </p>
+              </div>
+              <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden p-px mt-auto">
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${stats?.occupancy_rate || 0}%` }}
                   transition={{ duration: 1.5, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-xl" 
+                  className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"
                 />
               </div>
             </motion.div>
 
-            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md">
-              <div className="flex items-center gap-5 mb-8">
-                <div className="w-14 h-14 bg-cyan-500/10 text-cyan-500 rounded-2xl flex items-center justify-center shadow-xl"><BarChart3 size={28} /></div>
-                <div>
-                  <h3 className="text-xl font-black uppercase italic tracking-tighter text-white">Resum de Catàleg</h3>
-                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Events i Sessions actives</p>
+            {/* Catàleg */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.24 }}
+              className="bg-slate-900/40 border border-white/5 rounded-3xl p-6 sm:p-8 backdrop-blur-md flex flex-col gap-4 hover:border-cyan-500/20 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 bg-cyan-500/10 text-cyan-500 rounded-2xl flex items-center justify-center shadow-xl group-hover:bg-cyan-500/20 transition-colors">
+                  <BarChart3 size={24} />
                 </div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-cyan-500/60 bg-cyan-500/10 px-3 py-1 rounded-full">Catàleg</span>
               </div>
-              <div className="grid grid-cols-2 gap-6 mt-4">
-                <div className="p-6 bg-slate-950 rounded-2xl border border-white/5">
-                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Events</p>
-                  <p className="text-4xl font-black text-white italic tracking-tighter">{stats?.total_events || 0}</p>
+              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Resum de Catàleg</p>
+              <div className="grid grid-cols-2 gap-3 mt-auto">
+                <div className="p-4 bg-slate-950/80 rounded-2xl border border-white/5">
+                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Events</p>
+                  <p className="text-3xl font-black text-white italic tracking-tighter">{stats?.total_events || 0}</p>
                 </div>
-                <div className="p-6 bg-slate-950 rounded-2xl border border-white/5">
-                  <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">Sessions</p>
-                  <p className="text-4xl font-black text-white italic tracking-tighter">{stats?.total_sessions || 0}</p>
+                <div className="p-4 bg-slate-950/80 rounded-2xl border border-white/5">
+                  <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-1">Sessions</p>
+                  <p className="text-3xl font-black text-white italic tracking-tighter">{stats?.total_sessions || 0}</p>
                 </div>
               </div>
             </motion.div>
-          </div>
-          
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.4 }} className="bg-slate-900/40 border border-white/5 p-10 rounded-[3rem] backdrop-blur-md h-[400px]">
-            <h3 className="text-xl font-black uppercase italic tracking-tighter text-white mb-8">Evolució d'Ingressos</h3>
-            <ResponsiveContainer width="100%" height="80%">
-              <AreaChart data={mockChartData}>
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="name" stroke="#475569" />
-                <YAxis stroke="#475569" />
-                <RechartsTooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem' }} />
-                <Area type="monotone" dataKey="revenue" stroke="#6366f1" fillOpacity={1} fill="url(#colorRevenue)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </motion.div>
+
           </div>
         ) : (
           <ContentCard className="rounded-[3rem] overflow-hidden border border-white/[0.04] bg-slate-900/20 backdrop-blur-md">

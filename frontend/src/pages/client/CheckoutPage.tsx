@@ -135,25 +135,24 @@ export const CheckoutPage = () => {
             {/* Header */}
             <header className="max-w-6xl mx-auto mb-8 sm:mb-12">
                 {/* Fila: botó cancel·lar + timer */}
-                <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <div className="flex items-center justify-between gap-3 mb-4 sm:mb-6">
                     <button 
                         onClick={handleCancel} 
-                        className="group p-3 sm:p-4 bg-white/5 hover:bg-red-500/20 rounded-2xl transition-all border border-white/5 flex items-center gap-2 text-[9px] sm:text-[10px] font-black tracking-[0.15em] sm:tracking-[0.2em] shadow-xl hover:shadow-red-500/10 active:scale-95"
+                        className="flex items-center gap-2 px-4 py-3 bg-white/5 hover:bg-red-500/20 rounded-2xl transition-all border border-white/5 text-[10px] font-black tracking-[0.15em] shadow-xl hover:shadow-red-500/10 active:scale-95 flex-shrink-0"
                     >
-                        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" />
-                        <span className="hidden xs:inline">CANCEL·LAR</span>
+                        <ChevronLeft className="w-4 h-4" />
+                        <span>CANCEL·LAR</span>
                     </button>
 
                     {/* Timer */}
                     <motion.div 
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-colors ${timeLeft < 60 ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}
+                        className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border transition-colors flex-shrink-0 ${timeLeft < 60 ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'}`}
                     >
-                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
-                        <span className="font-black text-base sm:text-xl italic tracking-tighter leading-none">
+                        <Clock className="w-4 h-4 animate-pulse" />
+                        <span className="font-black text-base sm:text-lg italic tracking-tighter leading-none">
                             {formatTime(timeLeft)}
-                            <span className="hidden sm:inline text-xs uppercase tracking-widest opacity-50 ml-1">restants</span>
                         </span>
                     </motion.div>
                 </div>
