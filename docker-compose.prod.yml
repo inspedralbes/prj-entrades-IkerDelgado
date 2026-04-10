@@ -34,7 +34,7 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: base64:fH7Wv6eG6WjXk6ZlG4P6H6ZlG4P6H6ZlG4P6H6ZlG4P=
-      APP_URL: http://tickethub.daw.inspedralbes.cat
+      APP_URL: https://tickethub.daw.inspedralbes.cat
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306
@@ -45,7 +45,7 @@ services:
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: database
-      FRONTEND_URL: http://tickethub.daw.inspedralbes.cat
+      FRONTEND_URL: https://tickethub.daw.inspedralbes.cat
       SANCTUM_STATEFUL_DOMAINS: tickethub.daw.inspedralbes.cat
     depends_on:
       - mysql
@@ -60,12 +60,26 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./api:/var/www
       - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
     depends_on:
       - api
       - frontend
+    networks:
+      - ticket-network-prod
+
+  # Certbot (SSL Certificates)
+  certbot:
+    image: certbot/certbot
+    container_name: ticket-certbot-prod
+    volumes:
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     networks:
       - ticket-network-prod
 
@@ -96,8 +110,8 @@ services:
     expose:
       - "5173"
     environment:
-      VITE_API_URL: http://tickethub.daw.inspedralbes.cat/api
-      VITE_SOCKET_URL: http://tickethub.daw.inspedralbes.cat:3000
+      VITE_API_URL: https://tickethub.daw.inspedralbes.cat/api
+      VITE_SOCKET_URL: https://tickethub.daw.inspedralbes.cat
     networks:
       - ticket-network-prod
 
