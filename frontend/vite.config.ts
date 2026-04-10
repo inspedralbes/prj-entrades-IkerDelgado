@@ -11,6 +11,9 @@ export default defineConfig({
   server: {
     host: true, // Permet l'accés des de fora del contenidor
     port: 5173,
+    allowedHosts: [
+      'tickethub.daw.inspedralbes.cat'
+    ],
     watch: {
       usePolling: true, // Crucial per a Windows/Docker
     },
