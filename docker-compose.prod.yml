@@ -34,7 +34,7 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_KEY: base64:fH7Wv6eG6WjXk6ZlG4P6H6ZlG4P6H6ZlG4P6H6ZlG4P=
-      APP_URL: http://204.168.246.63
+      APP_URL: http://tickethub.daw.inspedralbes.cat
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306
@@ -45,15 +45,15 @@ services:
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
       SESSION_DRIVER: database
-      FRONTEND_URL: http://204.168.246.63:5173
-      SANCTUM_STATEFUL_DOMAINS: 204.168.246.63:5173
+      FRONTEND_URL: http://tickethub.daw.inspedralbes.cat
+      SANCTUM_STATEFUL_DOMAINS: tickethub.daw.inspedralbes.cat
     depends_on:
       - mysql
       - redis
     networks:
       - ticket-network-prod
 
-  # Nginx (Serving the API)
+  # Nginx (Serving the API and Proxying Frontend)
   nginx:
     image: nginx:alpine
     container_name: ticket-nginx-prod
@@ -65,6 +65,7 @@ services:
       - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - api
+      - frontend
     networks:
       - ticket-network-prod
 
@@ -92,11 +93,11 @@ services:
       dockerfile: Dockerfile
     container_name: ticket-frontend-prod
     restart: always
-    ports:
-      - "5173:5173"
+    expose:
+      - "5173"
     environment:
-      VITE_API_URL: http://204.168.246.63/api
-      VITE_SOCKET_URL: http://204.168.246.63:3000
+      VITE_API_URL: http://tickethub.daw.inspedralbes.cat/api
+      VITE_SOCKET_URL: http://tickethub.daw.inspedralbes.cat:3000
     networks:
       - ticket-network-prod
 
