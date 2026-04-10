@@ -9,16 +9,17 @@ export default defineConfig({
     react(),
   ],
   server: {
-    host: true, // Permet l'accés des de fora del contenidor
+    host: true, 
     port: 5173,
     allowedHosts: [
       'tickethub.daw.inspedralbes.cat'
     ],
     watch: {
-      usePolling: true, // Crucial per a Windows/Docker
+      usePolling: true,
     },
     hmr: {
-      clientPort: 5173, // Assegura que el navegador sàpiga on connectar-se per a HMR
+      host: 'tickethub.daw.inspedralbes.cat',
+      clientPort: 80, // El navegador se conectará al puerto 80 (Nginx)
     },
   },
 })

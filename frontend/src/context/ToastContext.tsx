@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, AlertCircle, Info, XCircle, X } from 'lucide-react';
 
@@ -38,7 +38,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
       {children}
       
       {/* Toast Container */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none max-w-md w-full sm:w-96">
+      <div className="fixed bottom-0 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 z-[9999] flex flex-col gap-2 sm:gap-3 pointer-events-none sm:max-w-sm sm:w-96 pb-3 sm:pb-0">
         <AnimatePresence>
           {toasts.map((toast) => (
             <motion.div
