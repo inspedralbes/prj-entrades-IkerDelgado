@@ -125,18 +125,18 @@ jobs:
           APP_ENV=testing
           APP_KEY=
           APP_DEBUG=true
-          DB_CONNECTION=mysql
-          DB_HOST=127.0.0.1
-          DB_PORT=3306
-          DB_DATABASE=ticket_test
-          DB_USERNAME=root
-          DB_PASSWORD=root
-          CACHE_STORE=array
-          SESSION_DRIVER=array
-          QUEUE_CONNECTION=sync
-          MAIL_MAILER=log
-          REDIS_HOST=127.0.0.1
-          REDIS_PORT=6379
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: ticket_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: log
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
           EOF
           php artisan key:generate --force
           php artisan test --parallel || true
@@ -179,7 +179,6 @@ jobs:
             fi
 
             echo "  Fetching latest changes from main..."
-            # Intentamos usar el token de GitHub por si el repositorio fuera privado
             git fetch origin main
             git reset --hard origin/main
 
@@ -228,14 +227,20 @@ jobs:
             COMPOSE="docker compose -f docker-compose.prod.yml"
 
             for i in $(seq 1 15); do
-              # Check if API is responding (via internal 9000 check)
+              # Check if API is responding (via internal artisan check)
               API_OK=$($COMPOSE exec -T api php artisan tinker --execute="echo 'OK';" 2>/dev/null | grep -c "OK" || true)
               # Check if NGINX (WEB) is responding on port 80
               WEB_OK=$(nc -z 127.0.0.1 80 2>/dev/null && echo 1 || echo 0)
               # Check if Socket server is responding on port 3000
               SOCKET_OK=$(nc -z 127.0.0.1 3000 2>/dev/null && echo 1 || echo 0)
-              # Check if Frontend is responding on port 5173
-              FRONT_OK=$(nc -z 127.0.0.1 5173 2>/dev/null && echo 1 || echo 0)
+              
+              # Check if Frontend is accessible through NGINX (internal request)
+              # Usamos curl para ver si devuelve algo el puerto 80 en la raiz (que ahora es el front)
+              FRONT_OK=$(curl -s -I http://127.0.0.1 | grep -q "200 OK" && echo 1 || echo 0)
+              # Si curl falla, probamos si al menos el contenedor de frontend está UP
+              if [ "$FRONT_OK" = "0" ]; then
+                FRONT_OK=$(docker ps --filter "name=ticket-frontend-prod" --filter "status=running" -q | grep -q . && echo 1 || echo 0)
+              fi
 
               if [ "$API_OK" = "1" ] && [ "$WEB_OK" = "1" ] && [ "$FRONT_OK" = "1" ]; then
                 echo "✅ All services are healthy!"
