@@ -1,0 +1,116 @@
+services:
+  # Database (MySQL 8.0)
+  mysql:
+    image: mysql:8.0
+    container_name: ticket-mysql
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-3306}:3306"
+
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - ticket-network
+
+  # Redis (Communication Laravel <-> Socket)
+  redis:
+    image: redis:alpine
+    container_name: ticket-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - ticket-network
+
+  # Laravel API (PHP-FPM)
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: ticket-api
+    working_dir: /var/www
+    volumes:
+      - ./api:/var/www
+    environment:
+      APP_ENV: local
+      DB_HOST: mysql
+      REDIS_HOST: redis
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - ticket-network
+
+  # Nginx (Serving the API)
+  nginx:
+    image: nginx:alpine
+    container_name: ticket-nginx
+    ports:
+      - "${API_EXTERNAL_PORT:-8000}:80"
+    volumes:
+      - ./api:/var/www
+      - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - api
+    networks:
+      - ticket-network
+
+  # Socket Server (Node.js)
+  socket:
+    build:
+      context: ./socket
+      dockerfile: Dockerfile
+    container_name: ticket-socket
+    ports:
+      - "${SOCKET_PORT:-3000}:3000"
+    volumes:
+      - ./socket:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      NODE_ENV: development
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+    networks:
+      - ticket-network
+
+  # Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ticket-frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    environment:
+      VITE_API_URL: http://localhost:${API_EXTERNAL_PORT:-8000}
+      VITE_SOCKET_URL: http://localhost:${SOCKET_PORT:-3000}
+    networks:
+      - ticket-network
+
+  # Adminer (Database Management GUI)
+  adminer:
+    image: adminer
+    container_name: ticket-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - ticket-network
+
+networks:
+  ticket-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local

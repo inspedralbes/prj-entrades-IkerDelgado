@@ -1,0 +1,124 @@
+services:
+  # Database (MySQL 8.0)
+  mysql:
+    image: mysql:8.0
+    container_name: ticket-mysql-prod
+    restart: always
+    environment:
+      MYSQL_DATABASE: concert_tickets_db
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_USER: ticket_user
+      MYSQL_PASSWORD: ticket_password
+    volumes:
+      - dbdata_prod:/var/lib/mysql
+    networks:
+      - ticket-network-prod
+
+  # Redis (Communication Laravel <-> Socket)
+  redis:
+    image: redis:alpine
+    container_name: ticket-redis-prod
+    restart: always
+    networks:
+      - ticket-network-prod
+
+  # Laravel API (PHP-FPM)
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: ticket-api-prod
+    restart: always
+    working_dir: /var/www
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: base64:fH7Wv6eG6WjXk6ZlG4P6H6ZlG4P6H6ZlG4P6H6ZlG4P=
+      APP_URL: https://tickethub.daw.inspedralbes.cat
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: concert_tickets_db
+      DB_USERNAME: ticket_user
+      DB_PASSWORD: ticket_password
+      REDIS_HOST: redis
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      SESSION_DRIVER: database
+      FRONTEND_URL: https://tickethub.daw.inspedralbes.cat
+      SANCTUM_STATEFUL_DOMAINS: tickethub.daw.inspedralbes.cat
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - ticket-network-prod
+
+  # Nginx (Serving the API and Proxying Frontend)
+  nginx:
+    image: nginx:alpine
+    container_name: ticket-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./api:/var/www
+      - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - ticket-network-prod
+
+  # Certbot (SSL Certificates)
+  certbot:
+    image: certbot/certbot
+    container_name: ticket-certbot-prod
+    volumes:
+      - ./docker/certbot/conf:/etc/letsencrypt
+      - ./docker/certbot/www:/var/www/certbot
+    command: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - ticket-network-prod
+
+  # Socket Server (Node.js)
+  socket:
+    build:
+      context: ./socket
+      dockerfile: Dockerfile
+    container_name: ticket-socket-prod
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      REDIS_HOST: redis
+    depends_on:
+      - redis
+    networks:
+      - ticket-network-prod
+
+  # Frontend (React + Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ticket-frontend-prod
+    restart: always
+    expose:
+      - "5173"
+    environment:
+      VITE_API_URL: https://tickethub.daw.inspedralbes.cat/api
+      VITE_SOCKET_URL: https://tickethub.daw.inspedralbes.cat
+    networks:
+      - ticket-network-prod
+
+networks:
+  ticket-network-prod:
+    driver: bridge
+
+volumes:
+  dbdata_prod:
+    driver: local

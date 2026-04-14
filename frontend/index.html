@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ca">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icono.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ticket Hub - Venda d'entrades</title>
+  </head>
+  <body class="bg-slate-950">
+    <div id="root">
+      <style>
+        #ssg-skeleton {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
+          background: #020617;
+          color: white;
+          font-family: sans-serif;
+        }
+        .spinner {
+          width: 48px;
+          height: 48px;
+          border: 4px solid #6366f1;
+          border-top-color: transparent;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-top: 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+      </style>
+      <div id="ssg-skeleton">
+        <div style="font-size: 2rem; font-weight: 900; letter-spacing: -0.05em; font-style: italic;">
+          TICKET<span style="color: #6366f1;">HUB</span>
+        </div>
+        <div class="spinner"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
